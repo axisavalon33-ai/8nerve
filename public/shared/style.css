@@ -1,0 +1,99 @@
+/* Shared look: calm, friendly, colourful (teal, blue, violet), very large touch targets. */
+:root {
+  --teal: #0f9b8e;
+  --teal-2: #14b8a6;
+  --blue: #2563eb;
+  --blue-2: #3b82f6;
+  --violet: #7c3aed;
+  --violet-2: #8b5cf6;
+  --ink: #12233d;
+  --ink-soft: #3d4f6b;
+  --paper: #ffffff;
+  --mist: #eef6fb;
+  --good: #10b981;
+  --mid: #f59e0b;
+  --refer: #ef6a5b;
+  --danger: #dc2626;
+  --radius: 28px;
+  --shadow: 0 18px 50px rgba(18, 35, 61, 0.18);
+  --font: 'Noto Sans', 'Noto Sans Tamil', 'Noto Sans Sinhala', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: var(--font);
+  color: var(--ink);
+  background: linear-gradient(135deg, #d9f4f0, #dbe7ff 50%, #ece3ff);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 84px;
+  padding: 16px 40px;
+  border: none;
+  border-radius: 999px;
+  font-size: 30px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.3s ease, filter 0.3s ease;
+  user-select: none;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.45;
+  filter: grayscale(1);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.btn.violet {
+  background: linear-gradient(135deg, var(--violet), var(--blue));
+}
+.btn.ghost {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(18, 35, 61, 0.12);
+}
+.btn.small {
+  min-height: 64px;
+  padding: 10px 26px;
+  font-size: 22px;
+}
+.btn.danger {
+  background: linear-gradient(135deg, #ef4444, var(--danger));
+  box-shadow: 0 10px 30px rgba(220, 38, 38, 0.4);
+}
+.btn svg {
+  width: 1.2em;
+  height: 1.2em;
+  flex: none;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+input,
+select {
+  font-family: inherit;
+}

@@ -1,0 +1,351 @@
+{
+  "_about": "All visitor text for the Ear & Balance station. Every entry has en / ta / si. Entries with \"needsReview\": true were written by the developer (not given by the project owner) and must be checked by a native speaker / lecturer before the exhibition. {n} and {total} are filled in by the program.",
+
+  "home.title": {
+    "en": "Hear & Balance — Your 8th cranial nerve",
+    "ta": "கேட்டலும் சமநிலையும் — 8ஆவது மண்டை நரம்பு",
+    "si": "ශ්‍රවණය සහ සමබරතාව — 8 වන කපාල ස්නායුව"
+  },
+  "home.prompt": {
+    "en": "Choose your language · மொழியைத் தெரிவு செய்யுங்கள் · භාෂාව තෝරන්න",
+    "ta": "Choose your language · மொழியைத் தெரிவு செய்யுங்கள் · භාෂාව තෝරන්න",
+    "si": "Choose your language · மொழியைத் தெரிவு செய்யுங்கள் · භාෂාව තෝරන්න"
+  },
+  "lang.name": { "en": "English", "ta": "தமிழ்", "si": "සිංහල" },
+
+  "menu.hearing": {
+    "en": "Test your hearing",
+    "ta": "உங்கள் கேட்கும் திறனைப் பரிசோதியுங்கள்",
+    "si": "ඔබේ ශ්‍රවණය පරීක්ෂා කරන්න"
+  },
+  "menu.vr": {
+    "en": "Experience balance disorders in VR",
+    "ta": "சமநிலைக் குறைபாடுகளை VR இல் அனுபவியுங்கள்",
+    "si": "සමබරතා ආබාධ VR හරහා අත්විඳින්න"
+  },
+  "menu.question": {
+    "en": "What would you like to do?",
+    "ta": "நீங்கள் என்ன செய்ய விரும்புகிறீர்கள்?",
+    "si": "ඔබ කුමක් කිරීමට කැමතිද?",
+    "needsReview": true
+  },
+  "nav.language": { "en": "Language", "ta": "மொழி", "si": "භාෂාව", "needsReview": true },
+  "nav.home": { "en": "Home", "ta": "முகப்பு", "si": "මුල් පිටුව", "needsReview": true },
+  "nav.back": { "en": "Back", "ta": "பின்செல்", "si": "ආපසු", "needsReview": true },
+  "nav.menu": {
+    "en": "Back to menu",
+    "ta": "முதன்மைப் பக்கத்துக்குத் திரும்பு",
+    "si": "ප්‍රධාන මෙනුවට",
+    "needsReview": true
+  },
+
+  "ack.title": {
+    "en": "Before you start",
+    "ta": "தொடங்குவதற்கு முன்",
+    "si": "ආරම්භ කිරීමට පෙර"
+  },
+  "ack.continue": { "en": "Continue", "ta": "தொடரவும்", "si": "ඉදිරියට" },
+
+  "ack.hearing.bullets": {
+    "en": [
+      "Please wear the headphones (headset) properly on both ears.",
+      "This is a screening simulation for awareness only. It is NOT a medical test or a diagnosis.",
+      "Results can be affected by background noise, the headphones and the volume.",
+      "If you are worried about your hearing, please see a doctor or an ear (ENT) / hearing clinic."
+    ],
+    "ta": [
+      "தயவுசெய்து ஹெட்ஃபோனை இரு காதுகளிலும் சரியாக அணியுங்கள்.",
+      "இது விழிப்புணர்வுக்கான ஒரு மாதிரிப் பரிசோதனை மட்டுமே. இது மருத்துவப் பரிசோதனையோ நோய் நிர்ணயமோ அல்ல.",
+      "சூழல் சத்தம், ஹெட்ஃபோன், ஒலியளவு என்பன முடிவுகளைப் பாதிக்கலாம்.",
+      "உங்கள் கேட்கும் திறன் பற்றிக் கவலை இருந்தால், வைத்தியரையோ காது (ENT) / கேட்டல் சிகிச்சை நிலையத்தையோ நாடுங்கள்."
+    ],
+    "si": [
+      "කරුණාකර හෙඩ්ෆෝන් දෙකන්ටම නිසි ලෙස පළඳින්න.",
+      "මෙය දැනුවත් කිරීම සඳහා පමණක් වූ පරීක්ෂණ අනුකරණයකි. මෙය වෛද්‍ය පරීක්ෂණයක් හෝ රෝග විනිශ්චයක් නොවේ.",
+      "වටපිටාවේ ශබ්දය, හෙඩ්ෆෝන් සහ ශබ්ද මට්ටම ප්‍රතිඵලවලට බලපෑ හැක.",
+      "ඔබේ ශ්‍රවණය ගැන කනස්සල්ලක් ඇත්නම්, වෛද්‍යවරයෙකු හෝ කන් (ENT) / ශ්‍රවණ සායනයක් හමුවන්න."
+    ]
+  },
+  "ack.hearing.tick": {
+    "en": "I have put on the headphones and I understand this is not a diagnosis.",
+    "ta": "நான் ஹெட்ஃபோனை அணிந்துள்ளேன்; இது நோய் நிர்ணயம் அல்ல என்பதைப் புரிந்துகொள்கிறேன்.",
+    "si": "මම හෙඩ්ෆෝන් පැළඳ ඇති අතර මෙය රෝග විනිශ්චයක් නොවන බව මට වැටහේ."
+  },
+
+  "ack.vr.bullets": {
+    "en": [
+      "Please sit down on the chair. Stay seated during the whole experience.",
+      "Put on the VR headset and the headphones. A helper will stay beside you.",
+      "This is a simulation for awareness only. It may make you feel dizzy or sick for a short time.",
+      "Close your eyes or take off the headset at any time if you feel unwell — the helper can press STOP."
+    ],
+    "ta": [
+      "தயவுசெய்து கதிரையில் அமருங்கள். முழு அனுபவத்தின் போதும் அமர்ந்தே இருங்கள்.",
+      "VR கண்ணாடியையும் ஹெட்ஃபோனையும் அணியுங்கள். ஒரு உதவியாளர் உங்கள் அருகில் இருப்பார்.",
+      "இது விழிப்புணர்வுக்கான மாதிரி அனுபவம் மட்டுமே. சிறிது நேரம் தலைச்சுற்று அல்லது ஓங்காளம் ஏற்படலாம்.",
+      "எப்போதாவது அசௌகரியமாக உணர்ந்தால் கண்களை மூடுங்கள் அல்லது கண்ணாடியைக் கழற்றுங்கள் — உதவியாளர் STOP அழுத்துவார்."
+    ],
+    "si": [
+      "කරුණාකර පුටුවේ වාඩි වන්න. මුළු අත්දැකීම පුරාම වාඩි වී සිටින්න.",
+      "VR කණ්ණාඩිය සහ හෙඩ්ෆෝන් පළඳින්න. උදව්කරුවෙකු ඔබ ළඟ සිටියි.",
+      "මෙය දැනුවත් කිරීම සඳහා පමණක් වූ අනුකරණයකි. කෙටි වේලාවක් ඔබට කැරකැවිල්ල හෝ ඔක්කාරය දැනිය හැක.",
+      "අපහසුවක් දැනුණොත් ඕනෑම වේලාවක ඇස් වසා ගන්න හෝ කණ්ණාඩිය ගලවන්න — උදව්කරු STOP ඔබයි."
+    ]
+  },
+  "ack.vr.exclusions": {
+    "en": "Do NOT take part if you: are pregnant; have epilepsy or seizures triggered by lights; have a heart condition; had recent eye, ear or head surgery; are dizzy or have a migraine now; get severe motion sickness; are under 13 years.",
+    "ta": "பின்வருவனவற்றில் ஏதாவது இருந்தால் பங்கேற்க வேண்டாம்: கர்ப்பம்; வலிப்பு நோய் அல்லது ஒளியால் ஏற்படும் வலிப்பு; இதய நோய்; அண்மையில் கண், காது அல்லது தலை சத்திரசிகிச்சை; தற்போது தலைச்சுற்று அல்லது ஒற்றைத் தலைவலி; கடுமையான பயண ஒவ்வாமை (motion sickness); 13 வயதுக்குக் குறைவு.",
+    "si": "පහත කිසිවක් ඔබට අදාළ නම් සහභාගි නොවන්න: ගැබිනි බව; අපස්මාරය හෝ ආලෝකය නිසා ඇතිවන වලිප්පුව; හෘද රෝග; මෑතකදී ඇස්, කන් හෝ හිසේ සැත්කමක්; දැනට කැරකැවිල්ල හෝ ඉරුවාරදය; දැඩි ගමන් අසනීපය (motion sickness); වයස අවු. 13ට අඩු."
+  },
+  "ack.vr.tick": {
+    "en": "I am seated, wearing the VR headset and headphones, none of the above applies to me, and I agree to take part.",
+    "ta": "நான் அமர்ந்துள்ளேன், VR கண்ணாடியும் ஹெட்ஃபோனும் அணிந்துள்ளேன், மேலே உள்ள எதுவும் எனக்குப் பொருந்தாது, பங்கேற்க ஒப்புக்கொள்கிறேன்.",
+    "si": "මම වාඩි වී, VR කණ්ණාඩිය සහ හෙඩ්ෆෝන් පැළඳ සිටිමි, ඉහත කිසිවක් මට අදාළ නොවේ, සහභාගි වීමට එකඟ වෙමි."
+  },
+
+  "volume.text": {
+    "en": "Adjust the volume until it is comfortable, then tap Continue.",
+    "ta": "ஒலியளவு உங்களுக்கு வசதியாக இருக்கும் வரை சரிசெய்து, பின்னர் \"தொடரவும்\" என்பதை அழுத்துங்கள்.",
+    "si": "ශබ්ද මට්ටම ඔබට සුවපහසු වන තෙක් සකසා, පසුව \"ඉදිරියට\" ඔබන්න.",
+    "needsReview": true
+  },
+  "volume.quieter": { "en": "Quieter", "ta": "குறைவாக", "si": "අඩුවෙන්", "needsReview": true },
+  "volume.louder": { "en": "Louder", "ta": "அதிகமாக", "si": "වැඩියෙන්", "needsReview": true },
+
+  "din.instructions": {
+    "en": "You will hear 3 numbers with noise. Type the 3 numbers you heard. If unsure, guess.",
+    "ta": "சத்தத்துடன் 3 இலக்கங்கள் கேட்கும். கேட்ட 3 இலக்கங்களையும் அழுத்துங்கள். உறுதியில்லையெனில் ஊகித்து அழுத்துங்கள்.",
+    "si": "ඝෝෂාවත් සමඟ අංක 3ක් ඇසෙයි. ඇසුණු අංක 3 ඔබන්න. විශ්වාස නැත්නම් අනුමාන කරන්න."
+  },
+  "din.startPractice": {
+    "en": "Start practice",
+    "ta": "பயிற்சியைத் தொடங்குங்கள்",
+    "si": "පුහුණුව අරඹන්න",
+    "needsReview": true
+  },
+  "din.practice": { "en": "Practice", "ta": "பயிற்சி", "si": "පුහුණුව", "needsReview": true },
+  "din.test": { "en": "Test", "ta": "பரிசோதனை", "si": "පරීක්ෂණය", "needsReview": true },
+  "din.practiceDone": {
+    "en": "Well done! Now the real test begins.",
+    "ta": "நன்று! இப்போது உண்மையான பரிசோதனை தொடங்குகிறது.",
+    "si": "ඉතා හොඳයි! දැන් සැබෑ පරීක්ෂණය ආරම්භ වේ.",
+    "needsReview": true
+  },
+  "din.startTest": {
+    "en": "Start the test",
+    "ta": "பரிசோதனையைத் தொடங்குங்கள்",
+    "si": "පරීක්ෂණය අරඹන්න",
+    "needsReview": true
+  },
+  "din.listen": { "en": "Listen…", "ta": "கவனமாகக் கேளுங்கள்…", "si": "සවන් දෙන්න…", "needsReview": true },
+  "din.type": {
+    "en": "Type the 3 numbers",
+    "ta": "3 இலக்கங்களையும் அழுத்துங்கள்",
+    "si": "අංක 3 ඔබන්න",
+    "needsReview": true
+  },
+  "din.ok": { "en": "OK", "ta": "OK", "si": "OK" },
+  "din.progress": { "en": "{n} of {total}", "ta": "{total} இல் {n}", "si": "{total}න් {n}", "needsReview": true },
+  "din.quit": {
+    "en": "Stop the test",
+    "ta": "பரிசோதனையை நிறுத்து",
+    "si": "පරීක්ෂණය නවත්වන්න",
+    "needsReview": true
+  },
+  "din.loading": { "en": "Please wait…", "ta": "சற்றுப் பொறுங்கள்…", "si": "මඳක් රැඳී සිටින්න…", "needsReview": true },
+  "din.missing": {
+    "en": "The number recordings are missing. Please ask a helper.",
+    "ta": "இலக்கப் பதிவுகள் இல்லை. உதவியாளரிடம் கேளுங்கள்.",
+    "si": "අංක පටිගත කිරීම් නොමැත. කරුණාකර උදව්කරුවෙකුගෙන් විමසන්න.",
+    "needsReview": true
+  },
+
+  "result.title": { "en": "Your result", "ta": "உங்கள் முடிவு", "si": "ඔබේ ප්‍රතිඵලය", "needsReview": true },
+  "result.good": {
+    "en": "Your hearing in noise seems good.",
+    "ta": "சத்தத்தின் நடுவே உங்கள் கேட்கும் திறன் நன்றாக உள்ளது போல் தெரிகிறது.",
+    "si": "ඝෝෂාව මැද ඔබේ ශ්‍රවණය හොඳ බව පෙනේ."
+  },
+  "result.borderline": {
+    "en": "Your result is borderline. Consider having your hearing checked.",
+    "ta": "உங்கள் முடிவு எல்லைக்கோட்டில் உள்ளது. கேட்கும் திறனைப் பரிசோதிப்பது நல்லது.",
+    "si": "ඔබේ ප්‍රතිඵලය සීමාන්තිකයි. ශ්‍රවණය පරීක්ෂා කරවා ගැනීම සලකා බලන්න."
+  },
+  "result.refer": {
+    "en": "You may have difficulty hearing in noise. Please get a proper hearing test at an ENT / hearing clinic.",
+    "ta": "சத்தத்தின் நடுவே கேட்பதில் உங்களுக்குச் சிரமம் இருக்கலாம். ENT / கேட்டல் சிகிச்சை நிலையத்தில் முறையான பரிசோதனை செய்யுங்கள்.",
+    "si": "ඝෝෂාව මැද ඇසීමේ අපහසුවක් ඔබට තිබිය හැක. ENT / ශ්‍රවණ සායනයකදී නිසි ශ්‍රවණ පරීක්ෂණයක් කරවා ගන්න."
+  },
+  "result.footer": {
+    "en": "Screening simulation only — not a diagnosis.",
+    "ta": "இது மாதிரிப் பரிசோதனை மட்டுமே — நோய் நிர்ணயம் அல்ல.",
+    "si": "මෙය පරීක්ෂණ අනුකරණයක් පමණි — රෝග විනිශ්චයක් නොවේ."
+  },
+  "result.gauge.good": { "en": "Good", "ta": "நன்று", "si": "හොඳයි", "needsReview": true },
+  "result.gauge.borderline": { "en": "Borderline", "ta": "எல்லைக்கோடு", "si": "සීමාන්තික", "needsReview": true },
+  "result.gauge.refer": { "en": "Get checked", "ta": "பரிசோதியுங்கள்", "si": "පරීක්ෂා කරවන්න", "needsReview": true },
+  "result.again": { "en": "Try again", "ta": "மீண்டும் முயலுங்கள்", "si": "නැවත උත්සාහ කරන්න", "needsReview": true },
+
+  "vr.choose": {
+    "en": "Choose a balance disorder to experience",
+    "ta": "அனுபவிக்க ஒரு சமநிலைக் குறைபாட்டைத் தெரிவு செய்யுங்கள்",
+    "si": "අත්විඳීමට සමබරතා ආබාධයක් තෝරන්න",
+    "needsReview": true
+  },
+  "vr.bppv.name": {
+    "en": "BPPV (right ear)",
+    "ta": "BPPV (வலது காது) — நிலை மாற்றத் தலைச்சுற்று",
+    "si": "BPPV (දකුණු කන) — ඉරියව් වෙනස්වීමේ කැරකැවිල්ල",
+    "needsReview": true
+  },
+  "vr.neuritis.name": {
+    "en": "Vestibular neuritis",
+    "ta": "வெஸ்டிபுலர் நியூரைடிஸ் (சமநிலை நரம்பு அழற்சி)",
+    "si": "වෙස්ටිබියුලර් නියුරයිටිස් (සමබරතා ස්නායු දැවිල්ල)",
+    "needsReview": true
+  },
+  "vr.menieres.name": { "en": "Ménière's disease", "ta": "மெனியர் நோய்", "si": "මෙනියර් රෝගය", "needsReview": true },
+  "vr.oscillopsia.name": {
+    "en": "Oscillopsia (bouncing vision)",
+    "ta": "ஒசிலோப்சியா (துள்ளும் பார்வை)",
+    "si": "ඔසිලොප්සියාව (පනින දර්ශනය)",
+    "needsReview": true
+  },
+
+  "vr.bppv.intro": {
+    "en": "Tiny crystals in the inner ear have moved to the wrong place. A short spell of spinning starts when you tilt your head. After START, slowly tilt your head towards your right shoulder.",
+    "ta": "உட்செவியில் உள்ள சிறிய படிகங்கள் தவறான இடத்திற்கு நகர்ந்துள்ளன. தலையைச் சாய்க்கும்போது சிறிது நேரம் தலைச்சுற்று ஏற்படும். START அழுத்திய பின், மெதுவாக உங்கள் தலையை வலது தோள் பக்கம் சாயுங்கள்.",
+    "si": "අභ්‍යන්තර කනේ ඇති කුඩා ස්ඵටික වැරදි ස්ථානයකට ගමන් කර ඇත. හිස ඇල කරන විට කෙටි වේලාවක් කැරකැවිල්ල ඇති වේ. START එබීමෙන් පසු, ඔබේ හිස සෙමින් දකුණු උරහිස දෙසට ඇල කරන්න.",
+    "needsReview": true
+  },
+  "vr.neuritis.intro": {
+    "en": "The balance nerve on one side is swollen, usually after a virus. The world seems to keep moving to one side. Keep your head still and look straight ahead.",
+    "ta": "ஒரு பக்கச் சமநிலை நரம்பு வீங்கியுள்ளது; பொதுவாக வைரஸ் தொற்றுக்குப் பின் இது ஏற்படும். உலகம் ஒரு பக்கமாகத் தொடர்ந்து நகர்வது போல் தோன்றும். தலையை அசைக்காமல் நேராகப் பாருங்கள்.",
+    "si": "එක් පැත්තක සමබරතා ස්නායුව ඉදිමී ඇත; සාමාන්‍යයෙන් වෛරසයකින් පසුව. ලෝකය එක් පැත්තකට නොනවත්වා චලනය වන බවක් පෙනේ. හිස නොසොලවා කෙළින්ම ඉදිරිය බලන්න.",
+    "needsReview": true
+  },
+  "vr.menieres.intro": {
+    "en": "Too much fluid builds up in the inner ear. This causes spinning attacks, a full or muffled ear and ringing in the ear. Keep your head still and listen.",
+    "ta": "உட்செவியில் அதிகளவு திரவம் சேர்கிறது. இது தலைச்சுற்று, காது அடைத்தது போன்ற உணர்வு, காதில் இரைச்சல் என்பவற்றை ஏற்படுத்தும். தலையை அசைக்காமல் கேளுங்கள்.",
+    "si": "අභ්‍යන්තර කනේ අධික තරලයක් එකතු වේ. මෙය කැරකැවිලි, කන පිරී ඇති බවක් හෝ ශබ්ද යටපත් වීමක් සහ කන තුළ නාදයක් ඇති කරයි. හිස නොසොලවා සවන් දෙන්න.",
+    "needsReview": true
+  },
+  "vr.oscillopsia.intro": {
+    "en": "When both balance organs are damaged, the eyes cannot stay steady when the head moves, so the world seems to bounce. After START, gently turn your head left and right, or nod.",
+    "ta": "இரு பக்கச் சமநிலை உறுப்புகளும் பாதிக்கப்படும்போது, தலை அசையும்போது கண்கள் நிலையாக இருக்க முடியாது; எனவே உலகம் துள்ளுவது போல் தோன்றும். START அழுத்திய பின், மெதுவாகத் தலையை இடமும் வலமும் திருப்புங்கள் அல்லது மேலும் கீழும் அசையுங்கள்.",
+    "si": "සමබරතා ඉන්ද්‍රිය දෙකම හානි වූ විට, හිස චලනය වන විට ඇස් ස්ථාවරව තබා ගත නොහැක; එබැවින් ලෝකය පනින බවක් පෙනේ. START එබීමෙන් පසු, හිස සෙමින් වමට සහ දකුණට හරවන්න, නැතහොත් ඉහළ පහළ සොලවන්න.",
+    "needsReview": true
+  },
+
+  "vr.start": { "en": "START", "ta": "START", "si": "START" },
+  "vr.stop": { "en": "STOP", "ta": "STOP", "si": "STOP" },
+  "vr.phoneMissing": {
+    "en": "The VR phone is not ready. Please ask the helper.",
+    "ta": "VR தொலைபேசி தயாராக இல்லை. உதவியாளரிடம் கேளுங்கள்.",
+    "si": "VR දුරකථනය සූදානම් නැත. කරුණාකර උදව්කරුගෙන් විමසන්න.",
+    "needsReview": true
+  },
+  "vr.running": {
+    "en": "Experience in progress — the helper can press STOP at any time.",
+    "ta": "அனுபவம் நடைபெறுகிறது — உதவியாளர் எப்போது வேண்டுமானாலும் STOP அழுத்தலாம்.",
+    "si": "අත්දැකීම සිදුවෙමින් පවතී — උදව්කරුට ඕනෑම වේලාවක STOP එබිය හැක.",
+    "needsReview": true
+  },
+  "vr.tiltHint": {
+    "en": "Slowly tilt your head to the right",
+    "ta": "மெதுவாகத் தலையை வலது பக்கம் சாயுங்கள்",
+    "si": "හිස සෙමින් දකුණට ඇල කරන්න",
+    "needsReview": true
+  },
+  "vr.moveHint": {
+    "en": "Gently turn or nod your head",
+    "ta": "மெதுவாகத் தலையைத் திருப்புங்கள் அல்லது அசையுங்கள்",
+    "si": "හිස සෙමින් හරවන්න හෝ සොලවන්න",
+    "needsReview": true
+  },
+  "vr.stopped": {
+    "en": "Stopped. The view is now calm and still.",
+    "ta": "நிறுத்தப்பட்டது. காட்சி இப்போது அமைதியாகவும் நிலையாகவும் உள்ளது.",
+    "si": "නවත්වන ලදී. දර්ශනය දැන් සන්සුන් සහ නිශ්චලයි.",
+    "needsReview": true
+  },
+  "vr.takeOff": {
+    "en": "Take the headset off slowly",
+    "ta": "VR கண்ணாடியை மெதுவாகக் கழற்றுங்கள்",
+    "si": "VR කණ්ණාඩිය සෙමින් ගලවන්න",
+    "needsReview": true
+  },
+  "vr.sitMoment": {
+    "en": "Sit for a moment before you stand up.",
+    "ta": "எழுந்திருப்பதற்கு முன் சிறிது நேரம் அமர்ந்திருங்கள்.",
+    "si": "නැගිටීමට පෙර මොහොතක් වාඩි වී සිටින්න.",
+    "needsReview": true
+  },
+  "vr.whatHeading": {
+    "en": "What happens in the inner ear?",
+    "ta": "உட்செவியில் என்ன நடக்கிறது?",
+    "si": "අභ්‍යන්තර කනේ සිදුවන්නේ කුමක්ද?",
+    "needsReview": true
+  },
+  "vr.doctorHeading": {
+    "en": "When to see a doctor",
+    "ta": "எப்போது வைத்தியரை நாட வேண்டும்?",
+    "si": "වෛද්‍යවරයෙකු හමුවිය යුත්තේ කවදාද?",
+    "needsReview": true
+  },
+  "vr.tryAnother": {
+    "en": "Try another condition",
+    "ta": "வேறொரு நிலையை முயலுங்கள்",
+    "si": "වෙනත් තත්ත්වයක් අත්හදා බලන්න",
+    "needsReview": true
+  },
+
+  "vr.bppv.what": {
+    "en": "In BPPV, tiny calcium crystals (otoconia) come loose and fall into one of the semicircular canals. When you tilt your head, they move the fluid, and the balance nerve sends a false \"spinning\" signal. The eyes then jerk (nystagmus) for a few seconds. A doctor or physiotherapist can often fix it in minutes with special head movements (the Epley manoeuvre).",
+    "ta": "BPPV இல், சிறிய கல்சியம் படிகங்கள் (ஓட்டோகோனியா) விலகி அரைவட்டக் கால்வாய் ஒன்றுக்குள் விழுகின்றன. தலையைச் சாய்க்கும்போது அவை திரவத்தை அசைக்கின்றன; சமநிலை நரம்பு பொய்யான \"சுழலும்\" சமிக்ஞையை அனுப்புகிறது. அப்போது சில விநாடிகள் கண்கள் துடிக்கும் (நிஸ்டாக்மஸ்). வைத்தியர் அல்லது இயன்மருத்துவர் சிறப்புத் தலை அசைவுகள் (எப்ளி முறை) மூலம் பெரும்பாலும் சில நிமிடங்களில் இதைச் சரிசெய்யலாம்.",
+    "si": "BPPV හිදී, කුඩා කැල්සියම් ස්ඵටික (ඔටොකෝනියා) ගැලවී අර්ධ වෘත්තාකාර නාලයකට වැටේ. ඔබ හිස ඇල කරන විට ඒවා තරලය චලනය කරන අතර, සමබරතා ස්නායුව ව්‍යාජ \"කැරකීමේ\" සංඥාවක් යවයි. එවිට තත්පර කිහිපයක් ඇස් ගැස්සෙයි (නිස්ටැග්මස්). වෛද්‍යවරයෙකුට හෝ භෞත චිකිත්සකයෙකුට විශේෂ හිස් චලන (එප්ලි ක්‍රමය) මගින් බොහෝ විට මිනිත්තු කිහිපයකින් මෙය සුව කළ හැක.",
+    "needsReview": true
+  },
+  "vr.bppv.doctor": {
+    "en": "See a doctor if short spinning attacks keep coming when you lie down, turn over in bed or look up.",
+    "ta": "படுக்கும்போது, படுக்கையில் புரளும்போது அல்லது மேலே பார்க்கும்போது குறுகிய தலைச்சுற்று மீண்டும் மீண்டும் ஏற்பட்டால் வைத்தியரை நாடுங்கள்.",
+    "si": "වැතිරෙන විට, ඇඳේ පෙරළෙන විට හෝ ඉහළ බලන විට කෙටි කැරකැවිලි නැවත නැවත ඇති වේ නම් වෛද්‍යවරයෙකු හමුවන්න.",
+    "needsReview": true
+  },
+  "vr.neuritis.what": {
+    "en": "In vestibular neuritis, the balance nerve (part of the 8th cranial nerve) on one side becomes inflamed, often after a cold or flu. The brain gets a stronger signal from the healthy side, so it feels as if you are turning all the time. The eyes drift slowly one way and jump back. Most people get better over days to weeks as the brain adapts.",
+    "ta": "வெஸ்டிபுலர் நியூரைடிஸில், ஒரு பக்கச் சமநிலை நரம்பு (8ஆவது மண்டை நரம்பின் ஒரு பகுதி) அழற்சியடைகிறது; பெரும்பாலும் தடிமன் அல்லது காய்ச்சலுக்குப் பின் இது நிகழும். ஆரோக்கியமான பக்கத்திலிருந்து மூளைக்கு வலுவான சமிக்ஞை கிடைப்பதால், தொடர்ந்து சுழல்வது போல் உணர்வீர்கள். கண்கள் மெதுவாக ஒரு பக்கம் நகர்ந்து மீண்டும் துள்ளுகின்றன. மூளை பழகிக்கொள்வதால் பெரும்பாலானோர் சில நாட்கள் முதல் சில வாரங்களில் குணமடைகின்றனர்.",
+    "si": "වෙස්ටිබියුලර් නියුරයිටිස් හිදී, එක් පැත්තක සමබරතා ස්නායුව (8 වන කපාල ස්නායුවේ කොටසක්) දැවිල්ලට ලක් වේ; බොහෝ විට සෙම්ප්‍රතිශ්‍යාවකින් හෝ උණකින් පසුව. නිරෝගී පැත්තෙන් මොළයට වඩා ප්‍රබල සංඥාවක් ලැබෙන නිසා, නොනවත්වා කැරකෙන බවක් දැනේ. ඇස් සෙමින් එක් පැත්තකට ගොස් ආපසු පනී. මොළය හුරු වන විට බොහෝ දෙනා දින කිහිපයක සිට සති කිහිපයක් තුළ සුවය ලබති.",
+    "needsReview": true
+  },
+  "vr.neuritis.doctor": {
+    "en": "Get help quickly if sudden, severe dizziness lasts for hours. Go to emergency care at once if you also have weakness, numbness, trouble speaking, double vision or a severe headache — these can be signs of a stroke.",
+    "ta": "திடீரெனக் கடுமையான தலைச்சுற்று பல மணி நேரம் நீடித்தால் விரைவாக உதவி பெறுங்கள். அத்துடன் உடல் பலவீனம், மரத்துப்போதல், பேசுவதில் சிரமம், இரட்டைப் பார்வை அல்லது கடுமையான தலைவலி இருந்தால் உடனடியாக அவசர சிகிச்சைக்குச் செல்லுங்கள் — இவை பக்கவாதத்தின் அறிகுறிகளாக இருக்கலாம்.",
+    "si": "හදිසි, දැඩි කැරකැවිල්ලක් පැය ගණනක් පවතී නම් ඉක්මනින් උදව් ලබා ගන්න. ඒ සමඟ දුර්වලතාවයක්, හිරි වැටීමක්, කතා කිරීමේ අපහසුවක්, ද්විත්ව පෙනීමක් හෝ දැඩි හිසරදයක් ඇත්නම් වහාම හදිසි ප්‍රතිකාර සඳහා යන්න — මේවා ආඝාතයක ලක්ෂණ විය හැක.",
+    "needsReview": true
+  },
+  "vr.menieres.what": {
+    "en": "In Ménière's disease, extra fluid (endolymph) builds up inside the inner ear. Spinning attacks can last from 20 minutes to several hours, with a full or muffled ear, ringing (tinnitus) and hearing that goes up and down. Over time, hearing in that ear may get worse.",
+    "ta": "மெனியர் நோயில், உட்செவியினுள் மேலதிக திரவம் (என்டோலிம்ஃப்) சேர்கிறது. 20 நிமிடங்கள் முதல் பல மணி நேரம் வரை தலைச்சுற்று நீடிக்கலாம்; அத்துடன் காது அடைத்த உணர்வு, காதில் இரைச்சல் (டினிடஸ்), கூடிக் குறையும் கேட்கும் திறன் என்பன ஏற்படும். காலப்போக்கில் அந்தக் காதின் கேட்கும் திறன் குறையலாம்.",
+    "si": "මෙනියර් රෝගයේදී, අභ්‍යන්තර කන තුළ අමතර තරලයක් (එන්ඩොලිම්ෆ්) එකතු වේ. මිනිත්තු 20 සිට පැය කිහිපයක් දක්වා කැරකැවිලි පැවතිය හැකි අතර, කන පිරී ඇති බවක්, කන තුළ නාදයක් (ටිනිටස්) සහ අඩු වැඩි වන ශ්‍රවණයක් ද ඇති වේ. කාලයත් සමඟ එම කනේ ශ්‍රවණය අඩු විය හැක.",
+    "needsReview": true
+  },
+  "vr.menieres.doctor": {
+    "en": "See a doctor or an ENT clinic if you have repeated spinning attacks together with a full ear, ringing or changes in your hearing.",
+    "ta": "காது அடைப்பு, இரைச்சல் அல்லது கேட்கும் திறன் மாற்றத்துடன் மீண்டும் மீண்டும் தலைச்சுற்று ஏற்பட்டால் வைத்தியரையோ ENT சிகிச்சை நிலையத்தையோ நாடுங்கள்.",
+    "si": "කන පිරී ඇති බව, කන තුළ නාදය හෝ ශ්‍රවණයේ වෙනස්කම් සමඟ නැවත නැවත කැරකැවිලි ඇති වේ නම් වෛද්‍යවරයෙකු හෝ ENT සායනයක් හමුවන්න.",
+    "needsReview": true
+  },
+  "vr.oscillopsia.what": {
+    "en": "Normally the inner ear tells the eyes how the head is moving, so the eyes move the opposite way and the picture stays still (the vestibulo-ocular reflex). If both inner ears are damaged — for example by some antibiotics such as gentamicin — this reflex fails, and the world bounces when you walk or turn your head.",
+    "ta": "சாதாரணமாக, தலை எப்படி அசைகிறது என்பதை உட்செவி கண்களுக்குத் தெரிவிக்கிறது; கண்கள் எதிர்த் திசையில் அசைவதால் காட்சி நிலையாக இருக்கும் (வெஸ்டிபுலோ-ஒக்யுலர் அனிச்சை). இரு உட்செவிகளும் பாதிக்கப்பட்டால் — உதாரணமாக ஜென்டாமைசின் போன்ற சில நுண்ணுயிர்க்கொல்லி மருந்துகளால் — இந்த அனிச்சை செயலிழக்கிறது; நடக்கும்போது அல்லது தலையைத் திருப்பும்போது உலகம் துள்ளுவது போல் தோன்றும்.",
+    "si": "සාමාන්‍යයෙන් හිස චලනය වන ආකාරය අභ්‍යන්තර කන ඇස්වලට දන්වයි; එවිට ඇස් ප්‍රතිවිරුද්ධ දිශාවට චලනය වී දර්ශනය නිශ්චලව පවතී (වෙස්ටිබියුලෝ-ඔකියුලර් ප්‍රතීකය). අභ්‍යන්තර කන් දෙකම හානි වුවහොත් — උදාහරණයක් ලෙස ජෙන්ටාමයිසින් වැනි සමහර ප්‍රතිජීවක ඖෂධවලින් — මෙම ප්‍රතීකය අසාර්ථක වන අතර, ඇවිදින විට හෝ හිස හරවන විට ලෝකය පනින බවක් පෙනේ.",
+    "needsReview": true
+  },
+  "vr.oscillopsia.doctor": {
+    "en": "See a doctor if your vision jumps or blurs when you walk or move your head, or if you feel unsteady in the dark.",
+    "ta": "நடக்கும்போது அல்லது தலையை அசைக்கும்போது பார்வை துள்ளினால் அல்லது மங்கினால், அல்லது இருட்டில் தள்ளாட்டமாக உணர்ந்தால் வைத்தியரை நாடுங்கள்.",
+    "si": "ඇවිදින විට හෝ හිස චලනය කරන විට පෙනීම පනී නම් හෝ බොඳ වේ නම්, නැතහොත් අඳුරේදී අස්ථාවර බවක් දැනේ නම් වෛද්‍යවරයෙකු හමුවන්න.",
+    "needsReview": true
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+# runtime data (results, settings, certificates) – stays on the laptop
+data/
+# media files are NOT stored in git (videos, digit recordings)
+media/**
+!media/
+!media/ear/
+!media/ear/README.md
+.DS_Store

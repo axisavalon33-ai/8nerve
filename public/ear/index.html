@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Ear &amp; Balance</title>
+    <link rel="stylesheet" href="/shared/fonts.css" />
+    <link rel="stylesheet" href="/shared/style.css" />
+    <link rel="stylesheet" href="/ear/ear.css" />
+  </head>
+  <body>
+    <!-- Background: looping video (muted). If media/ear/home.mp4 is missing, a soft moving gradient shows instead. -->
+    <div id="bg">
+      <video id="bgVideo" src="/media/ear/home.mp4" autoplay muted loop playsinline preload="auto"></video>
+      <div id="bgShade"></div>
+    </div>
+
+    <!-- Small navigation buttons (hidden on HOME and while VR is running) -->
+    <nav id="topbar">
+      <button class="btn ghost small" id="navLang" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" /></svg>
+        <span data-i18n="nav.language"></span>
+      </button>
+      <button class="btn ghost small" id="navHome" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" /></svg>
+        <span data-i18n="nav.home"></span>
+      </button>
+    </nav>
+
+    <div id="langPopup" class="hidden">
+      <div class="card">
+        <button class="btn lang-btn" data-setlang="en" type="button">English</button>
+        <button class="btn lang-btn" data-setlang="ta" type="button">தமிழ்</button>
+        <button class="btn lang-btn" data-setlang="si" type="button">සිංහල</button>
+      </div>
+    </div>
+
+    <main>
+      <!-- 1. HOME -->
+      <section class="screen" id="s-home">
+        <header class="home-title">
+          <h1 data-i18n="home.title" data-lang="en"></h1>
+          <h1 data-i18n="home.title" data-lang="ta"></h1>
+          <h1 data-i18n="home.title" data-lang="si"></h1>
+        </header>
+        <div class="home-bottom">
+          <p class="home-prompt" data-i18n="home.prompt"></p>
+          <div class="lang-bar">
+            <button class="btn lang-btn" data-lang-choice="en" type="button"><span data-i18n="lang.name" data-lang="en"></span></button>
+            <button class="btn lang-btn" data-lang-choice="ta" type="button"><span data-i18n="lang.name" data-lang="ta"></span></button>
+            <button class="btn lang-btn" data-lang-choice="si" type="button"><span data-i18n="lang.name" data-lang="si"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. MENU -->
+      <section class="screen" id="s-menu">
+        <h2 class="menu-q" data-i18n="menu.question"></h2>
+        <div class="menu-cards">
+          <button class="menu-card hearing" id="goHearing" type="button">
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round">
+              <path d="M10 38v-6a22 22 0 0 1 44 0v6" />
+              <rect x="8" y="36" width="12" height="18" rx="5" fill="currentColor" fill-opacity=".25" />
+              <rect x="44" y="36" width="12" height="18" rx="5" fill="currentColor" fill-opacity=".25" />
+            </svg>
+            <span data-i18n="menu.hearing"></span>
+          </button>
+          <button class="menu-card vr" id="goVr" type="button">
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round">
+              <path d="M8 22h48a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H42l-6-7h-8l-6 7H8a4 4 0 0 1-4-4V26a4 4 0 0 1 4-4z" fill="currentColor" fill-opacity=".2" />
+              <circle cx="20" cy="33" r="5" />
+              <circle cx="44" cy="33" r="5" />
+              <path d="M20 22l4-8h16l4 8" />
+            </svg>
+            <span data-i18n="menu.vr"></span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 3a. HEARING acknowledgement -->
+      <section class="screen panel" id="s-ackHearing">
+        <div class="card ack">
+          <h2 data-i18n="ack.title"></h2>
+          <ul class="bullets" data-i18n="ack.hearing.bullets"></ul>
+          <label class="tick">
+            <input type="checkbox" id="tickHearing" />
+            <span class="box"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+            <span data-i18n="ack.hearing.tick"></span>
+          </label>
+          <div class="row">
+            <button class="btn ghost" data-go="menu" type="button"><span data-i18n="nav.back"></span></button>
+            <button class="btn" id="contHearing" disabled type="button"><span data-i18n="ack.continue"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Loading / missing recordings -->
+      <section class="screen panel" id="s-loading">
+        <div class="card msg"><div class="spinner"></div><p data-i18n="din.loading"></p></div>
+      </section>
+      <section class="screen panel" id="s-missing">
+        <div class="card msg">
+          <p data-i18n="din.missing"></p>
+          <button class="btn" data-go="menu" type="button"><span data-i18n="nav.menu"></span></button>
+        </div>
+      </section>
+
+      <!-- Volume -->
+      <section class="screen panel" id="s-volume">
+        <div class="card ack">
+          <div class="big-icon pulse">
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M10 26h10l14-12v36L20 38H10z" fill="currentColor" fill-opacity=".2" /><path d="M42 24a12 12 0 0 1 0 16M48 18a20 20 0 0 1 0 28" /></svg>
+          </div>
+          <p class="lead" data-i18n="volume.text"></p>
+          <div class="volume">
+            <button class="vol-step" id="volDown" type="button" aria-label="-">−</button>
+            <div class="vol-track">
+              <input type="range" id="volSlider" min="0" max="100" value="50" />
+              <div class="vol-labels"><span data-i18n="volume.quieter"></span><span data-i18n="volume.louder"></span></div>
+            </div>
+            <button class="vol-step" id="volUp" type="button" aria-label="+">+</button>
+          </div>
+          <div class="row">
+            <button class="btn ghost" data-go="menu" type="button"><span data-i18n="nav.back"></span></button>
+            <button class="btn" id="contVolume" type="button"><span data-i18n="ack.continue"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Instructions -->
+      <section class="screen panel" id="s-instructions">
+        <div class="card ack">
+          <div class="demo-triplet"><span>4</span><span>7</span><span>2</span></div>
+          <p class="lead" data-i18n="din.instructions"></p>
+          <div class="row">
+            <button class="btn" id="startPractice" type="button"><span data-i18n="din.startPractice"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Practice finished -->
+      <section class="screen panel" id="s-practiceDone">
+        <div class="card ack">
+          <div class="big-icon"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="32" r="26" fill="currentColor" fill-opacity=".15" /><path d="M20 33l8 8 16-17" /></svg></div>
+          <p class="lead" data-i18n="din.practiceDone"></p>
+          <div class="row"><button class="btn" id="startTest" type="button"><span data-i18n="din.startTest"></span></button></div>
+        </div>
+      </section>
+
+      <!-- Test (practice + real) -->
+      <section class="screen panel" id="s-test">
+        <div class="card test">
+          <div class="test-head">
+            <span class="pill" id="testLabel"></span>
+            <span class="progress-text" id="progressText"></span>
+            <button class="btn ghost small" id="quitTest" type="button"><span data-i18n="din.quit"></span></button>
+          </div>
+          <div class="progress"><div id="progressBar"></div></div>
+          <p class="status" id="testStatus"></p>
+          <div class="slots"><span></span><span></span><span></span></div>
+          <div class="keypad" id="keypad">
+            <button data-k="1" type="button">1</button><button data-k="2" type="button">2</button><button data-k="3" type="button">3</button>
+            <button data-k="4" type="button">4</button><button data-k="5" type="button">5</button><button data-k="6" type="button">6</button>
+            <button data-k="7" type="button">7</button><button data-k="8" type="button">8</button><button data-k="9" type="button">9</button>
+            <button data-k="del" class="del" type="button" aria-label="delete">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12z" /><path d="M12 9l6 6M18 9l-6 6" /></svg>
+            </button>
+            <button data-k="0" type="button">0</button>
+            <button data-k="ok" class="ok" type="button"><span data-i18n="din.ok"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Result -->
+      <section class="screen panel" id="s-result">
+        <div class="card ack result">
+          <h2 data-i18n="result.title"></h2>
+          <svg class="gauge" viewBox="0 0 300 175" aria-hidden="true">
+            <defs>
+              <linearGradient id="gGood" x1="0" x2="1"><stop offset="0" stop-color="#14b8a6" /><stop offset="1" stop-color="#10b981" /></linearGradient>
+            </defs>
+            <path d="M30 150 A120 120 0 0 1 90 46.1" stroke="url(#gGood)" stroke-width="34" fill="none" stroke-linecap="round" />
+            <path d="M96 42.7 A120 120 0 0 1 204 42.7" stroke="#f59e0b" stroke-width="34" fill="none" />
+            <path d="M210 46.1 A120 120 0 0 1 270 150" stroke="#ef6a5b" stroke-width="34" fill="none" stroke-linecap="round" />
+            <g id="needle" style="transform-origin: 150px 150px">
+              <path d="M150 150 L150 48" stroke="#12233d" stroke-width="7" stroke-linecap="round" />
+              <circle cx="150" cy="150" r="13" fill="#12233d" />
+            </g>
+          </svg>
+          <div class="gauge-labels">
+            <span class="g" data-i18n="result.gauge.good"></span>
+            <span class="b" data-i18n="result.gauge.borderline"></span>
+            <span class="r" data-i18n="result.gauge.refer"></span>
+          </div>
+          <p class="lead result-text" id="resultText"></p>
+          <div class="row">
+            <button class="btn ghost" id="tryAgain" type="button"><span data-i18n="result.again"></span></button>
+            <button class="btn" data-go="menu" type="button"><span data-i18n="nav.menu"></span></button>
+          </div>
+          <p class="footer-note" data-i18n="result.footer"></p>
+        </div>
+      </section>
+
+      <!-- 3b. VR acknowledgement -->
+      <section class="screen panel" id="s-ackVr">
+        <div class="card ack">
+          <h2 data-i18n="ack.title"></h2>
+          <ul class="bullets" data-i18n="ack.vr.bullets"></ul>
+          <p class="warning" data-i18n="ack.vr.exclusions"></p>
+          <label class="tick">
+            <input type="checkbox" id="tickVr" />
+            <span class="box"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+            <span data-i18n="ack.vr.tick"></span>
+          </label>
+          <div class="row">
+            <button class="btn ghost" data-go="menu" type="button"><span data-i18n="nav.back"></span></button>
+            <button class="btn" id="contVr" disabled type="button"><span data-i18n="ack.continue"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- VR: choose condition -->
+      <section class="screen panel" id="s-vrChoose">
+        <div class="vr-choose">
+          <h2 data-i18n="vr.choose"></h2>
+          <div class="cond-grid">
+            <button class="cond c-bppv" data-cond="bppv" type="button"><span class="cond-ico">↻</span><span data-i18n="vr.bppv.name"></span></button>
+            <button class="cond c-neuritis" data-cond="neuritis" type="button"><span class="cond-ico">⇢</span><span data-i18n="vr.neuritis.name"></span></button>
+            <button class="cond c-menieres" data-cond="menieres" type="button"><span class="cond-ico">≈</span><span data-i18n="vr.menieres.name"></span></button>
+            <button class="cond c-oscillopsia" data-cond="oscillopsia" type="button"><span class="cond-ico">↕</span><span data-i18n="vr.oscillopsia.name"></span></button>
+          </div>
+          <div class="row"><button class="btn ghost" data-go="menu" type="button"><span data-i18n="nav.back"></span></button></div>
+        </div>
+      </section>
+
+      <!-- VR: explanation + START -->
+      <section class="screen panel" id="s-vrIntro">
+        <div class="card ack">
+          <h2 id="vrIntroName"></h2>
+          <p class="lead" id="vrIntroText"></p>
+          <p class="warning hidden" id="vrPhoneMissing" data-i18n="vr.phoneMissing"></p>
+          <div class="row">
+            <button class="btn ghost" data-go="vrChoose" type="button"><span data-i18n="nav.back"></span></button>
+            <button class="btn violet start-btn" id="vrStart" type="button"><span data-i18n="vr.start"></span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- VR: running -->
+      <section class="screen panel" id="s-vrRunning">
+        <div class="card ack">
+          <h2 id="vrRunName"></h2>
+          <p class="lead hint" id="vrRunHint"></p>
+          <div class="progress"><div id="vrProgress"></div></div>
+          <p class="note" data-i18n="vr.running"></p>
+        </div>
+      </section>
+
+      <!-- VR: after -->
+      <section class="screen panel" id="s-vrAfter">
+        <div class="card ack after">
+          <p class="note hidden" id="vrStoppedNote" data-i18n="vr.stopped"></p>
+          <h2 class="take-off" data-i18n="vr.takeOff"></h2>
+          <p class="lead" data-i18n="vr.sitMoment"></p>
+          <div class="explain">
+            <h3 data-i18n="vr.whatHeading"></h3>
+            <p id="vrWhat"></p>
+            <h3 data-i18n="vr.doctorHeading"></h3>
+            <p id="vrDoctor"></p>
+          </div>
+          <div class="row">
+            <button class="btn ghost" data-go="vrChoose" type="button"><span data-i18n="vr.tryAnother"></span></button>
+            <button class="btn" data-go="menu" type="button"><span data-i18n="nav.menu"></span></button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Always visible while VR is active -->
+    <button class="btn danger hidden" id="stopBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
+      <span data-i18n="vr.stop"></span>
+    </button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/shared/i18n.js"></script>
+    <script src="/ear/js/din.js"></script>
+    <script src="/ear/js/dsp.js"></script>
+    <script src="/ear/js/din-audio.js"></script>
+    <script src="/ear/js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#000000" />
+    <title>Ear &amp; Balance – VR</title>
+    <link rel="stylesheet" href="/shared/fonts.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        font-family: 'Noto Sans', 'Noto Sans Tamil', 'Noto Sans Sinhala', sans-serif;
+        touch-action: none;
+      }
+      canvas {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }
+      video {
+        display: none;
+      }
+      #setup {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        padding: 20px;
+        color: #fff;
+        text-align: center;
+        background: linear-gradient(135deg, #0f9b8e, #2563eb 55%, #7c3aed);
+      }
+      #setup h1 {
+        margin: 0;
+        font-size: 26px;
+      }
+      #setup p {
+        margin: 0;
+        font-size: 16px;
+        max-width: 560px;
+        line-height: 1.5;
+        opacity: 0.95;
+      }
+      #startBtn {
+        min-width: 260px;
+        min-height: 80px;
+        border: none;
+        border-radius: 999px;
+        font: 700 26px inherit;
+        font-family: inherit;
+        color: #12233d;
+        background: #fff;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      }
+      #setupStatus {
+        font-size: 15px;
+        min-height: 1.4em;
+      }
+      #exitBtn {
+        position: fixed;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+        width: 46px;
+        height: 30px;
+        border: none;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 14px;
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <video id="cam" playsinline muted autoplay></video>
+    <canvas id="view"></canvas>
+
+    <!-- Helper-only setup screen (seen before the phone goes into the VR box) -->
+    <div id="setup">
+      <h1>Ear &amp; Balance – VR phone</h1>
+      <p>1. Turn the phone sideways (landscape). 2. Tap the button. 3. Allow camera and motion sensors. 4. Put the phone in the VR box. The tablet controls everything after that.</p>
+      <button id="startBtn" type="button">Tap to start VR</button>
+      <div id="setupStatus">Connecting…</div>
+    </div>
+    <!-- Small helper button (top middle, on the divider line): back to the setup screen -->
+    <button id="exitBtn" class="hidden" type="button" aria-label="setup">⋯</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/shared/i18n.js"></script>
+    <script src="/vr/effects.js"></script>
+    <script src="/vr/vr.js"></script>
+  </body>
+</html>

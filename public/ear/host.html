@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ear &amp; Balance – Host</title>
+    <link rel="stylesheet" href="/shared/fonts.css" />
+    <link rel="stylesheet" href="/shared/style.css" />
+    <link rel="stylesheet" href="/ear/staff.css" />
+  </head>
+  <body>
+    <div id="pinBox" class="card pin-box hidden">
+      <h1>Host – enter PIN</h1>
+      <form id="pinForm">
+        <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" />
+        <button class="btn" type="submit">Open</button>
+      </form>
+      <p class="err" id="pinErr"></p>
+    </div>
+
+    <div class="wrap hidden" id="main">
+      <h1>Ear &amp; Balance – Host</h1>
+
+      <div class="grid">
+        <div class="card">
+          <h2><span class="dot" id="tabDot"></span>Tablet (/ear)</h2>
+          <dl class="kv">
+            <dt>Connected</dt><dd id="tabConn">–</dd>
+            <dt>Screen</dt><dd id="tabScreen">–</dd>
+            <dt>Language</dt><dd id="tabLang">–</dd>
+          </dl>
+        </div>
+        <div class="card">
+          <h2><span class="dot" id="vrDot"></span>VR phone (/vr)</h2>
+          <dl class="kv">
+            <dt>Connected</dt><dd id="vrConn">–</dd>
+            <dt>Ready</dt><dd id="vrReady">–</dd>
+            <dt>Camera</dt><dd id="vrCam">–</dd>
+            <dt>Motion sensors</dt><dd id="vrSensors">–</dd>
+            <dt>State</dt><dd id="vrState">–</dd>
+            <dt>Condition</dt><dd id="vrCond">–</dd>
+            <dt>Head tilt</dt><dd id="vrTilt">–</dd>
+            <dt>Frames / s</dt><dd id="vrFps">–</dd>
+          </dl>
+          <div class="btn-row"><button class="btn danger small" id="hostStop" type="button">STOP VR</button></div>
+          <p class="small-note">Head tilt should show a positive number (e.g. +35°) when the visitor tilts the head to the RIGHT shoulder. If it is negative, tick "Invert head tilt" below.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Hearing results (anonymous)</h2>
+        <div class="counts">
+          <div class="count"><b id="cTotal">0</b>Total</div>
+          <div class="count"><b id="cToday">0</b>Today</div>
+          <div class="count band-good"><b id="cGood">0</b>Good</div>
+          <div class="count band-borderline"><b id="cBorder">0</b>Borderline</div>
+          <div class="count band-refer"><b id="cRefer">0</b>Refer</div>
+          <div class="count"><b id="cLang">–</b>EN / TA / SI</div>
+        </div>
+        <table>
+          <thead><tr><th>Time</th><th>Language</th><th>SRT (dB SNR)</th><th>Band</th></tr></thead>
+          <tbody id="recent"></tbody>
+        </table>
+        <div class="btn-row">
+          <a class="btn ghost small" id="csvLink" href="#">Download CSV</a>
+          <button class="btn ghost small" id="resetResults" type="button">Reset results…</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Settings</h2>
+        <form id="settingsForm" class="form-grid">
+          <label>GOOD if SRT ≤ (dB)<input type="number" step="0.5" name="bands.good" /></label>
+          <label>REFER if SRT &gt; (dB)<input type="number" step="0.5" name="bands.refer" /></label>
+          <label>Idle timeout → HOME (s)<input type="number" min="15" name="idleTimeoutSec" /></label>
+          <label>Idle timeout during a hearing test (s, 0 = off)<input type="number" min="0" name="testIdleTimeoutSec" /></label>
+          <label>VR intensity
+            <select name="vr.intensity"><option value="low">Low (default)</option><option value="medium">Medium</option><option value="high">High</option></select>
+          </label>
+          <label>BPPV effect length (s, max 20)<input type="number" min="5" max="20" name="vr.durations.bppv" /></label>
+          <label>Vestibular neuritis length (s, max 20)<input type="number" min="5" max="20" name="vr.durations.neuritis" /></label>
+          <label>Ménière's length (s, max 20)<input type="number" min="5" max="20" name="vr.durations.menieres" /></label>
+          <label>Oscillopsia length (s, max 20)<input type="number" min="5" max="20" name="vr.durations.oscillopsia" /></label>
+          <label>Gentle ramp-up (s)<input type="number" min="1" max="6" step="0.5" name="vr.rampSec" /></label>
+          <label>BPPV: tilt needed (°)<input type="number" min="10" max="60" name="vr.bppvTiltDeg" /></label>
+          <label>BPPV: delay after tilt (s)<input type="number" min="0" max="5" step="0.5" name="vr.bppvLatencySec" /></label>
+          <label>BPPV: wait for tilt at most (s)<input type="number" min="5" max="120" name="vr.bppvWaitMaxSec" /></label>
+          <label>Ménière's sound volume (0–1, capped)<input type="number" min="0" max="1" step="0.05" name="vr.menieresVolume" /></label>
+          <label class="check"><input type="checkbox" name="vr.invertTilt" /> Invert head tilt</label>
+          <label>Test trials<input type="number" min="6" max="40" name="din.testTrials" /></label>
+          <label>Practice trials<input type="number" min="0" max="5" name="din.practiceTrials" /></label>
+          <label>SRT = mean of trials from #<input type="number" min="1" max="20" name="din.scoreFrom" /></label>
+          <label>Start SNR (dB)<input type="number" step="0.5" name="din.startSnr" /></label>
+          <label>Step (dB)<input type="number" step="0.5" min="0.5" name="din.stepDb" /></label>
+          <label>Practice SNR (dB)<input type="number" step="0.5" name="din.practiceSnr" /></label>
+          <label>Staff PIN (4–8 digits)<input type="text" inputmode="numeric" name="pin" /></label>
+        </form>
+        <div class="btn-row">
+          <button class="btn small" id="saveSettings" type="button">Save settings</button>
+          <button class="btn ghost small" id="resetSettings" type="button">Restore defaults</button>
+          <span class="saved" id="savedMsg">Saved ✓</span>
+        </div>
+        <p class="small-note">Result bands are placeholders until confirmed by an ENT / audiology lecturer. Visitors never see dB numbers.</p>
+      </div>
+
+      <div class="card">
+        <h2>Digit recordings</h2>
+        <table>
+          <thead><tr><th>Language</th><th>Digits recorded</th></tr></thead>
+          <tbody id="digitTable"></tbody>
+        </table>
+        <div class="btn-row">
+          <a class="btn ghost small" href="/ear/record">Open recording helper</a>
+          <a class="btn ghost small" href="/ear" target="_blank">Open tablet page</a>
+          <a class="btn ghost small" href="/vr" target="_blank">Open VR page</a>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/ear/staff.js"></script>
+    <script src="/ear/js/host.js"></script>
+  </body>
+</html>

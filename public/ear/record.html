@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ear &amp; Balance – Record digits</title>
+    <link rel="stylesheet" href="/shared/fonts.css" />
+    <link rel="stylesheet" href="/shared/style.css" />
+    <link rel="stylesheet" href="/ear/staff.css" />
+  </head>
+  <body>
+    <div id="pinBox" class="card pin-box hidden">
+      <h1>Recording helper – enter PIN</h1>
+      <form id="pinForm">
+        <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" />
+        <button class="btn" type="submit">Open</button>
+      </form>
+      <p class="err" id="pinErr"></p>
+    </div>
+
+    <div class="wrap hidden" id="main">
+      <h1>Record the digits 0–9</h1>
+      <div class="card">
+        <p class="small-note">
+          Use a quiet room. Hold the tablet about 20 cm from the mouth. Tap <b>Record</b>, say the number once, clearly and calmly, at a normal
+          loudness. Recording stops by itself after 3 seconds (or tap <b>Stop</b>). Silence is cut off and the loudness is evened out automatically.
+          Listen with <b>Play</b>, then tap <b>Save</b>. Use the same speaker for all ten digits of a language.
+        </p>
+        <div class="lang-pick">
+          <button class="btn" data-lang="en" type="button">English</button>
+          <button class="btn" data-lang="ta" type="button">தமிழ்</button>
+          <button class="btn" data-lang="si" type="button">සිංහල</button>
+        </div>
+        <p class="err" id="micErr"></p>
+      </div>
+
+      <div id="recArea" class="hidden">
+        <div class="btn-row" style="margin-bottom: 16px">
+          <button class="btn violet small" id="playAll" type="button">▶ Play all saved digits</button>
+          <a class="btn ghost small" href="/ear/host">Back to host page</a>
+        </div>
+        <div class="digits" id="digits"></div>
+      </div>
+    </div>
+
+    <script src="/ear/staff.js"></script>
+    <script src="/ear/js/dsp.js"></script>
+    <script src="/ear/js/record.js"></script>
+  </body>
+</html>
