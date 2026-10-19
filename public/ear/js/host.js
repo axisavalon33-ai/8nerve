@@ -25,7 +25,7 @@
     });
     $('#saveSettings').addEventListener('click', saveSettings);
     $('#resetSettings').addEventListener('click', async () => {
-      if (!confirm('Restore all settings to their defaults? (The PIN stays the same.)')) return;
+      if (!confirm('Restore all settings to their defaults? (The PIN and the headset calibration stay the same.)')) return;
       fillForm(await Staff.api('/api/host/settings/reset', { method: 'POST' }));
       flashSaved();
     });
@@ -51,7 +51,8 @@
     $('#vrDot').className = 'dot' + (vr.connected ? (vr.ready ? ' on' : ' warn') : '');
     $('#vrConn').textContent = vr.connected ? `Yes (${vr.connected})` : 'No';
     $('#vrReady').textContent = vr.ready ? 'Yes' : 'No – tap "Tap to start VR" on the phone';
-    $('#vrCam').textContent = vr.camera === 'ok' ? 'OK' : vr.camera === 'error' ? 'Not available (drawn scene used)' : '–';
+    const camText = { ok: 'OK' + (vr.camRes ? ` (${vr.camRes})` : ''), error: 'Not working – retrying every 4 s', denied: 'Permission refused – allow the camera in Chrome' };
+    $('#vrCam').textContent = camText[vr.camera] || '–';
     $('#vrSensors').textContent = vr.sensors ? 'OK' : 'No data';
     $('#vrState').textContent = vr.state || '–';
     $('#vrCond').textContent = COND_NAMES[vr.condition] || '–';

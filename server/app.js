@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
 const { Server } = require('socket.io');
-const { SettingsStore, CONDITIONS, bandFor } = require('./settings');
+const { SettingsStore, CONDITIONS, CAL_DEFAULTS, bandFor } = require('./settings');
 const { ResultsStore } = require('./results');
 
 const LANGS = ['en', 'ta', 'si'];
@@ -37,6 +37,8 @@ function createApp({ dataDir, mediaDir }) {
   app.get(['/vr', '/vr/'], page('vr/index.html'));
   app.use(express.static(path.join(ROOT, 'public'), { index: false, maxAge: 0 }));
   app.use('/media', express.static(mediaDir, { maxAge: 0 }));
+  // Three.js comes from node_modules (installed once with npm install) – no internet needed later.
+  app.use('/vendor/three', express.static(path.join(ROOT, 'node_modules', 'three', 'build')));
 
   // ---------- public API ----------
   app.get('/api/config', (req, res) => res.json(settings.publicView()));
@@ -110,6 +112,7 @@ function createApp({ dataDir, mediaDir }) {
     tablet: { connected: 0, screen: null, lang: null, at: null },
     vr: { connected: 0, at: null },
   };
+  let testPattern = false; // calibration test pattern on the phone (not saved)
   const broadcastStatus = () => {
     io.to('host').emit('status', status);
     io.to('tablet').emit('status', status);
@@ -136,6 +139,7 @@ function createApp({ dataDir, mediaDir }) {
       socket.emit('settings', settings.publicView());
       socket.emit('status', status);
       if (role === 'host') socket.emit('results', results.summary());
+      if (role === 'vr') socket.emit('vr:cal', { cal: settings.get().vrCal, testPattern });
       broadcastStatus();
 
       socket.on('tablet:status', (s) => {
@@ -148,7 +152,7 @@ function createApp({ dataDir, mediaDir }) {
 
       socket.on('vr:status', (s) => {
         if (role !== 'vr' || !s || typeof s !== 'object') return;
-        const allowed = ['state', 'condition', 'camera', 'sensors', 'tilt', 'fps', 'ready', 'elapsed', 'duration'];
+        const allowed = ['state', 'condition', 'camera', 'camRes', 'sensors', 'tilt', 'fps', 'ready', 'elapsed', 'duration'];
         for (const k of allowed) if (k in s) status.vr[k] = s[k];
         status.vr.at = Date.now();
         broadcastStatus();
@@ -173,6 +177,17 @@ function createApp({ dataDir, mediaDir }) {
         if (role !== 'tablet' && role !== 'host') return;
         io.to('vr').emit('vr:stop', { lang: msg && LANGS.includes(msg.lang) ? msg.lang : undefined });
         io.to('tablet').emit('vr:stopped', { by: role });
+      });
+
+      // Headset calibration from the hidden tablet panel: sent to the phone at once and saved.
+      socket.on('vr:cal', (msg) => {
+        if ((role !== 'tablet' && role !== 'host') || !msg || typeof msg !== 'object') return;
+        if (msg.reset) settings.update({ vrCal: CAL_DEFAULTS });
+        else if (msg.cal) settings.update({ vrCal: msg.cal });
+        if (typeof msg.testPattern === 'boolean') testPattern = msg.testPattern;
+        const payload = { cal: settings.get().vrCal, testPattern };
+        io.to('vr').emit('vr:cal', payload);
+        socket.emit('vr:cal', payload); // echo the cleaned-up values back to the panel
       });
 
       // Forwarded from the phone when a condition ends by itself.

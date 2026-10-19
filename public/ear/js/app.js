@@ -356,6 +356,7 @@
 
   // ---------------- socket ----------------
   socket.on('settings', (cfg) => (state.config = cfg));
+  socket.on('vr:cal', (msg) => state.config && (state.config.vrCal = msg.cal));
   socket.on('digits', (m) => (state.manifest = m));
   socket.on('status', (s) => {
     state.status = s;
@@ -364,6 +365,79 @@
     updateVrProgress();
   });
   socket.on('connect', () => socket.emit('tablet:status', { screen: state.screen, lang: state.lang }));
+
+  // ---------------- hidden headset calibration ----------------
+  // Press and hold the top-right corner for 3 s. Values go live to the phone over Socket.IO.
+  const CAL_FIELDS = [
+    ['distortion', 'Distortion', 0, 1, 0.01],
+    ['zoom', 'Zoom', 0.4, 2.5, 0.01],
+    ['ipd', 'Distance between eye centres', 0.3, 0.7, 0.005],
+    ['vertical', 'Vertical position', -0.25, 0.25, 0.005],
+    ['eyeSize', 'Eye circle size', 0.4, 1.3, 0.01],
+    ['roundness', 'Roundness', 0, 1, 0.01],
+    ['noseWidth', 'Nose cutout width', 0, 0.4, 0.005],
+    ['noseHeight', 'Nose cutout height', 0, 0.6, 0.005],
+    ['divider', 'Divider width', 0, 0.06, 0.001],
+    ['pictureSize', 'Picture size in screen mode', 0.8, 2.2, 0.01],
+  ];
+  const calInputs = {};
+  for (const [key, label, min, max, step] of CAL_FIELDS) {
+    const wrap = document.createElement('div');
+    wrap.className = 'cal-field';
+    wrap.innerHTML = `<label><span></span><output></output></label><input type="range" min="${min}" max="${max}" step="${step}" />`;
+    wrap.querySelector('span').textContent = label;
+    const input = wrap.querySelector('input');
+    const out = wrap.querySelector('output');
+    input.addEventListener('input', () => {
+      out.textContent = Number(input.value).toFixed(3).replace(/\.?0+$/, '');
+      queueCal();
+    });
+    calInputs[key] = { input, out };
+    $('#calFields').appendChild(wrap);
+  }
+  function fillCal(cal) {
+    if (!cal) return;
+    for (const [key] of CAL_FIELDS) {
+      const { input, out } = calInputs[key];
+      input.value = cal[key];
+      out.textContent = Number(cal[key]).toFixed(3).replace(/\.?0+$/, '');
+    }
+  }
+  let calTimer = null;
+  function queueCal() {
+    // at most ~10 updates per second while a slider is dragged
+    if (calTimer) return;
+    calTimer = setTimeout(() => {
+      calTimer = null;
+      const cal = {};
+      for (const [key] of CAL_FIELDS) cal[key] = Number(calInputs[key].input.value);
+      socket.emit('vr:cal', { cal, testPattern: $('#calTest').checked });
+    }, 100);
+  }
+  $('#calTest').addEventListener('change', () => socket.emit('vr:cal', { testPattern: $('#calTest').checked }));
+  $('#calReset').addEventListener('click', () => socket.emit('vr:cal', { reset: true, testPattern: $('#calTest').checked }));
+  $('#calClose').addEventListener('click', () => {
+    $('#calPanel').classList.add('hidden');
+    $('#calTest').checked = false;
+    socket.emit('vr:cal', { testPattern: false });
+  });
+  socket.on('vr:cal', (msg) => fillCal(msg.cal));
+
+  function openCal() {
+    fillCal(state.config && state.config.vrCal);
+    const vr = state.status.vr || {};
+    $('#calPhone').textContent = vr.connected ? (vr.ready ? `Phone ready${vr.camRes ? ' · ' + vr.camRes : ''}` : 'Phone connected, not started') : 'Phone not connected';
+    $('#calPanel').classList.remove('hidden');
+  }
+  let holdTimer = null;
+  const hot = $('#calHotspot');
+  hot.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(openCal, 3000);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => hot.addEventListener(ev, () => clearTimeout(holdTimer)));
+  hot.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // ---------------- start ----------------
   function wait(ms) {
@@ -384,6 +458,6 @@
   }
 
   // Exposed for automated tests only.
-  window.__ear = { state, audio, show };
+  window.__ear = { state, audio, show, openCal };
   init();
 })();

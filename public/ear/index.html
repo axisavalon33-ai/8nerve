@@ -276,6 +276,24 @@
       </section>
     </main>
 
+    <!-- Hidden headset calibration: press and hold the top-right corner for 3 seconds (staff only) -->
+    <div id="calHotspot" aria-hidden="true"></div>
+    <div id="calPanel" class="hidden">
+      <div class="card cal-card">
+        <div class="cal-head">
+          <h2>Headset calibration</h2>
+          <span class="cal-phone" id="calPhone"></span>
+        </div>
+        <p class="cal-note">Changes are sent to the VR phone at once and saved on the laptop.</p>
+        <div class="cal-grid" id="calFields"></div>
+        <label class="cal-test"><input type="checkbox" id="calTest" /> Show test pattern on the phone (grid, red cross, amber ring)</label>
+        <div class="row">
+          <button class="btn ghost small" id="calReset" type="button">Reset to defaults</button>
+          <button class="btn small" id="calClose" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Always visible while VR is active -->
     <button class="btn danger hidden" id="stopBtn" type="button">
       <svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>

@@ -30,7 +30,8 @@ only need to be on the same Wi-Fi (a pocket router or the laptop's own hotspot i
    ```
    npm install
    ```
-   This downloads the three libraries the server needs (Express, Socket.IO, selfsigned). The fonts (Noto Sans, Noto Sans Tamil,
+   This downloads the libraries the station needs (Express, Socket.IO, selfsigned, Three.js). They are stored in the
+   `node_modules` folder on the laptop. The fonts (Noto Sans, Noto Sans Tamil,
    Noto Sans Sinhala) are already inside the project in `public/fonts/`, so nothing is loaded from the internet later.
 
 ## 2. Copy the media files
@@ -96,7 +97,32 @@ Tips for the exhibition:
    Tilt the headset towards your **right** shoulder – *Head tilt* should show a **positive** number (e.g. `+35°`).
    If it shows a negative number, tick **Invert head tilt** in the settings and save.
 - The small `⋯` button at the top middle of the phone screen brings back the setup screen.
-- If the camera cannot start, a calm drawn room is shown instead (host shows "Camera: Not available").
+- The host page shows the camera resolution (e.g. *Camera: OK (1920×1080)*). If the camera stops or fails, both eyes show
+  "Camera not working — trying again…" and the phone retries every 4 seconds by itself.
+
+### Fit the picture to your VR box (calibration – do this once)
+1. On the tablet, **press and hold the top-right corner of the screen for 3 seconds** (it is hidden so visitors don't find it).
+   The *Headset calibration* panel opens.
+2. Tick **Show test pattern** – the phone shows a grid, a red cross in the middle and an amber ring at the edge of each eye.
+3. Put the phone in the VR box and look through it. Move the sliders until:
+   - the two red crosses join into **one** cross (*Distance between eye centres*, *Vertical position*);
+   - the grid lines look **straight**, not bent (*Distortion*);
+   - each eye fills the lens nicely (*Eye circle size*, *Roundness*, *Zoom*);
+   - the dark notch fits the box's nose gap (*Nose cutout width / height*).
+4. Tap **Close** (the test pattern turns off). The values change on the phone immediately and are saved on the laptop,
+   so you only do this again with a different phone or VR box. *Reset to defaults* puts all sliders back.
+
+| Setting | Range | Default |
+|---|---|---|
+| Distortion | 0–1 | 0.25 |
+| Zoom | 0.4–2.5 | 1.0 |
+| Distance between eye centres (fraction of screen width) | 0.30–0.70 | 0.50 |
+| Vertical position (fraction of screen height) | −0.25–0.25 | 0 |
+| Eye circle size (fraction of screen height) | 0.4–1.3 | 0.92 |
+| Roundness (1 = circle) | 0–1 | 1.0 |
+| Nose cutout width / height | 0–0.4 / 0–0.6 | 0.12 / 0.22 |
+| Divider width | 0–0.06 | 0.006 |
+| Picture size in screen mode (the text panels shown inside the headset) | 0.8–2.2 | 1.6 |
 
 ## 6. Record the digits (once per language)
 
@@ -143,7 +169,10 @@ Digits-in-noise screening (inspired by digits-in-noise phone tests; no WHO name 
 
 ## How the VR effects work (`public/vr/effects.js`)
 
-All effects are drawn on the camera image with canvas transforms. **No flashing, strobing or brightness changes** anywhere; text
+The phone draws everything with one Three.js shader (`public/vr/renderer.js`): the rear camera (centre square of the
+picture, up to 1920×1080 at 30 fps, continuous focus/exposure/white balance, zoom 1.0) is shown in two lens-shaped eyes with
+Cardboard-style barrel distortion, at the phone's full screen resolution and with unchanged colours. The effects are applied
+in the same lens space, so they are distorted correctly. **No flashing, strobing or brightness changes** anywhere; text
 inside the headset fades in slowly. Every condition is limited to **20 s**, starts with a **3 s gentle ramp**, and the global
 intensity is **Low** by default (Low 0.35 / Medium 0.6 / High 0.85 of the maximum). Hard limits: rotation ±15°, shift 15 % of the
 view, Ménière's sound capped at 25 % of full volume.
@@ -170,10 +199,11 @@ when the phone is held sideways in a VR box.
 ```
 npm test
 ```
-28 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
+30 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
 the noise generator, silence trimming/normalising, the WAV file, the nystagmus timing, BPPV (right tilt only, delay, build-up and
 fade, ends by itself), the 20 s limit and ramp, oscillopsia (still head = still picture), the head-tilt maths, the server API, the
-PIN protection, anonymous result saving, settings limits, digit upload, STOP from tablet → phone, and that every translation key
+PIN protection, anonymous result saving, settings limits, digit upload, STOP from tablet → phone, headset calibration (limits,
+saving, live to the phone), that Three.js is served locally, and that every translation key
 exists in EN/TA/SI with your exact texts.
 
 ### Quick test on the laptop only
@@ -211,7 +241,7 @@ You can open `/vr` in a second window to try the VR page with the laptop camera.
 ```
 server/            Node.js server (Express + Socket.IO, HTTPS certificate, settings, results)
 public/ear/        tablet app, host page, recording helper
-public/vr/         VR phone page and effect maths
+public/vr/         VR phone page: camera.js (camera), renderer.js (headset shader), effects.js (effect maths)
 public/shared/     translations.json (all visitor text), fonts.css, i18n.js, style.css
 public/fonts/      bundled Noto fonts (SIL Open Font License)
 media/             your videos and recordings (not on GitHub)
@@ -225,7 +255,8 @@ test/              automatic tests (npm test)
 |---|---|
 | Tablet says "The number recordings are missing" | Record the digits for that language in `/ear/record` (all 10 needed). |
 | START is grey, "The VR phone is not ready" | On the phone, open `/vr` and tap *Tap to start VR*. Check the host page. |
-| Phone shows a drawn room instead of the camera | Camera permission was refused or the page is not HTTPS. In Chrome: lock icon → Permissions → Camera → Allow, then reload. |
+| Phone says "Camera permission refused" | In Chrome: lock icon → Permissions → Camera → Allow, then reload. The page must be `https://`. |
+| Two pictures don't join / lines look bent in the headset | Calibrate: hold the tablet's top-right corner for 3 s (see step 5). |
 | BPPV never starts | Host page → *Head tilt* must become positive (> 30) when tilting right. Otherwise tick *Invert head tilt*. |
 | Devices cannot open the page | Same Wi-Fi? Correct IP (look at the `npm start` window)? Windows firewall allowed? |
 | "Your connection is not private" again | The laptop's IP address changed – accept the certificate again, or give the laptop a fixed IP. |

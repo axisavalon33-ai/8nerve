@@ -275,6 +275,18 @@
     "si": "VR කණ්ණාඩිය සෙමින් ගලවන්න",
     "needsReview": true
   },
+  "vr.cameraError": {
+    "en": "Camera not working — trying again…",
+    "ta": "கமரா இயங்கவில்லை — மீண்டும் முயற்சிக்கிறது…",
+    "si": "කැමරාව ක්‍රියා නොකරයි — නැවත උත්සාහ කරමින්…",
+    "needsReview": true
+  },
+  "vr.cameraDenied": {
+    "en": "Camera permission refused. Please ask the helper.",
+    "ta": "கமரா அனுமதி மறுக்கப்பட்டது. உதவியாளரிடம் கேளுங்கள்.",
+    "si": "කැමරා අවසරය ප්‍රතික්ෂේප විය. කරුණාකර උදව්කරුගෙන් විමසන්න.",
+    "needsReview": true
+  },
   "vr.sitMoment": {
     "en": "Sit for a moment before you stand up.",
     "ta": "எழுந்திருப்பதற்கு முன் சிறிது நேரம் அமர்ந்திருங்கள்.",

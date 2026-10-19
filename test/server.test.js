@@ -123,3 +123,43 @@ test('STOP on the tablet reaches the VR phone; START carries the settings', asyn
   await new Promise((r) => bad.on('auth-error', r));
   for (const c of [phone, tablet, host, bad]) c.close();
 });
+
+test('headset calibration: live to the phone, clamped to the allowed ranges, saved, kept on settings reset', async () => {
+  const connect = (auth) =>
+    new Promise((resolve) => {
+      const s = ioClient(base, { auth, transports: ['websocket'] });
+      s.on('connect', () => resolve(s));
+    });
+  const phone = await connect({ role: 'vr' });
+  const tablet = await connect({ role: 'tablet' });
+
+  const got = new Promise((r) => phone.on('vr:cal', (m) => m.testPattern && r(m)));
+  tablet.emit('vr:cal', { cal: { distortion: 5, ipd: 0.6, zoom: 0.1 }, testPattern: true });
+  const m = await got;
+  assert.equal(m.cal.distortion, 1); // max 1
+  assert.equal(m.cal.zoom, 0.4); // min 0.4
+  assert.equal(m.cal.ipd, 0.6);
+  assert.equal(m.cal.eyeSize, 0.92); // untouched default
+  const saved = JSON.parse(fs.readFileSync(path.join(dataDir, 'settings.json'), 'utf8'));
+  assert.equal(saved.vrCal.ipd, 0.6);
+
+  await json('/api/host/settings/reset', { method: 'POST', headers: PIN });
+  assert.equal((await json('/api/config')).body.vrCal.ipd, 0.6, 'calibration survives "Restore defaults"');
+
+  const reset = new Promise((r) => phone.on('vr:cal', (msg) => msg.cal.ipd === 0.5 && r(msg)));
+  tablet.emit('vr:cal', { reset: true, testPattern: false });
+  const r = await reset;
+  assert.equal(r.testPattern, false);
+  assert.equal(r.cal.distortion, 0.25);
+
+  // A newly connected phone gets the current calibration straight away.
+  const late = ioClient(base, { auth: { role: 'vr' }, transports: ['websocket'] });
+  const first = await new Promise((res) => late.once('vr:cal', res));
+  assert.equal(first.cal.ipd, 0.5);
+  for (const c of [phone, tablet, late]) c.close();
+});
+
+test('Three.js is served locally (offline)', async () => {
+  assert.equal((await fetch(base + '/vendor/three/three.module.min.js')).status, 200);
+  assert.equal((await fetch(base + '/vendor/three/three.core.min.js')).status, 200);
+});

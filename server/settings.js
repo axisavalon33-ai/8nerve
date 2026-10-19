@@ -7,6 +7,21 @@ const CONDITIONS = ['bppv', 'neuritis', 'menieres', 'oscillopsia'];
 const INTENSITY_LEVELS = { low: 0.35, medium: 0.6, high: 0.85 };
 const MAX_CONDITION_SEC = 20;
 
+// VR headset calibration (set live from the hidden panel on the tablet). [min, max, default]
+const CAL_LIMITS = {
+  distortion: [0, 1, 0.25],
+  zoom: [0.4, 2.5, 1.0],
+  ipd: [0.3, 0.7, 0.5],
+  vertical: [-0.25, 0.25, 0],
+  eyeSize: [0.4, 1.3, 0.92],
+  roundness: [0, 1, 1.0],
+  noseWidth: [0, 0.4, 0.12],
+  noseHeight: [0, 0.6, 0.22],
+  divider: [0, 0.06, 0.006],
+  pictureSize: [0.8, 2.2, 1.6],
+};
+const CAL_DEFAULTS = Object.fromEntries(Object.entries(CAL_LIMITS).map(([k, v]) => [k, v[2]]));
+
 const DEFAULTS = {
   pin: '2468',
   // Result bands (PLACEHOLDERS – confirm with an ENT / audiology lecturer).
@@ -35,6 +50,7 @@ const DEFAULTS = {
     invertTilt: false,
     menieresVolume: 0.5, // 0..1, is multiplied by a hard safety cap on the phone
   },
+  vrCal: CAL_DEFAULTS,
 };
 
 function clampNum(v, min, max, fallback) {
@@ -80,12 +96,23 @@ function sanitize(input, base = DEFAULTS) {
       menieresVolume: clampNum(v.menieresVolume, 0, 1, base.vr.menieresVolume),
     },
   };
+  out.vrCal = sanitizeCal(s.vrCal, base.vrCal);
   for (const c of CONDITIONS) {
     out.vr.durations[c] = clampNum(vd[c], 5, MAX_CONDITION_SEC, base.vr.durations[c]);
   }
   // The good limit must not be above the refer limit.
   if (out.bands.good > out.bands.refer) out.bands.good = out.bands.refer;
   if (out.din.scoreFrom > out.din.testTrials) out.din.scoreFrom = 1;
+  return out;
+}
+
+function sanitizeCal(input, base = CAL_DEFAULTS) {
+  const c = input && typeof input === 'object' ? input : {};
+  const b = base || CAL_DEFAULTS;
+  const out = {};
+  for (const [k, [min, max, def]] of Object.entries(CAL_LIMITS)) {
+    out[k] = clampNum(c[k], min, max, b[k] !== undefined ? b[k] : def);
+  }
   return out;
 }
 
@@ -126,8 +153,9 @@ class SettingsStore {
     return this.value;
   }
   reset() {
-    const pin = this.value.pin;
-    this.value = sanitize({ ...DEFAULTS, pin });
+    // Keeps the PIN and the headset calibration (those belong to this hardware).
+    const { pin, vrCal } = this.value;
+    this.value = sanitize({ ...DEFAULTS, pin, vrCal });
     this.save();
     return this.value;
   }
@@ -143,4 +171,4 @@ function bandFor(srt, bands) {
   return 'refer';
 }
 
-module.exports = { SettingsStore, DEFAULTS, CONDITIONS, INTENSITY_LEVELS, MAX_CONDITION_SEC, sanitize, merge, bandFor };
+module.exports = { SettingsStore, DEFAULTS, CAL_LIMITS, CAL_DEFAULTS, sanitizeCal, CONDITIONS, INTENSITY_LEVELS, MAX_CONDITION_SEC, sanitize, merge, bandFor };
