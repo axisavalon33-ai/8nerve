@@ -19,6 +19,7 @@
   "homepage": "https://github.com/axisavalon33-ai/8nerve#readme",
   "dependencies": {
     "express": "^5.3.0",
+    "qrcode": "^1.5.4",
     "selfsigned": "^5.5.0",
     "socket.io": "^4.8.4",
     "three": "^0.180.0"

@@ -31,6 +31,7 @@
     });
 
     Staff.api('/api/host/settings').then(fillForm);
+    Staff.api('/api/host/links').then(renderLinks);
     fetch('/api/ear/digits').then((r) => r.json()).then(renderDigits);
   }
 
@@ -58,6 +59,44 @@
     $('#vrCond').textContent = COND_NAMES[vr.condition] || '–';
     $('#vrTilt').textContent = vr.tilt !== undefined ? (vr.tilt > 0 ? '+' : '') + vr.tilt + '°' : '–';
     $('#vrFps').textContent = vr.fps || '–';
+  }
+
+  // ---------- QR codes ----------
+  function qrBox(title, url, svg, size) {
+    const box = document.createElement('div');
+    box.className = 'qr ' + size;
+    box.innerHTML = `<b></b><div class="code">${svg}</div><a target="_blank"></a>`;
+    box.querySelector('b').textContent = title;
+    const a = box.querySelector('a');
+    a.href = url;
+    a.textContent = url;
+    return box;
+  }
+  function renderLinks(data) {
+    const main = $('#qrMain');
+    main.innerHTML = '';
+    const [best, ...others] = data.addresses;
+    if (!best) {
+      main.textContent = 'This laptop is not connected to a network. Connect it to the Wi-Fi, then restart the server.';
+      return;
+    }
+    main.append(
+      qrBox('Tablet', best.urls.tablet, best.qr.tablet, 'big'),
+      qrBox('VR phone', best.urls.vr, best.qr.vr, 'big'),
+      qrBox('Record digits', best.urls.record, best.qr.record, 'small'),
+    );
+    $('#qrOtherWrap').classList.toggle('hidden', !others.length);
+    const other = $('#qrOther');
+    other.innerHTML = '';
+    for (const a of others) {
+      const title = document.createElement('p');
+      title.className = 'adapter';
+      title.textContent = `${a.ip} – ${a.adapter}${a.likely ? '' : ' (probably a virtual adapter)'}`;
+      const row = document.createElement('div');
+      row.className = 'qr-row';
+      row.append(qrBox('Tablet', a.urls.tablet, a.qr.tablet, 'small'), qrBox('VR phone', a.urls.vr, a.qr.vr, 'small'));
+      other.append(title, row);
+    }
   }
 
   // ---------- results ----------

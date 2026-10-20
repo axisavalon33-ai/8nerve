@@ -227,3 +227,61 @@ td {
   font-size: 26px;
   color: var(--good);
 }
+
+/* connect card with QR codes */
+.qr-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 10px 0 6px;
+}
+.qr {
+  flex: 1;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--mist);
+  text-align: center;
+}
+.qr.big {
+  max-width: 340px;
+}
+.qr b {
+  display: block;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+.qr .code {
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+}
+.qr .code svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.qr a {
+  display: block;
+  margin-top: 8px;
+  font-size: 15px;
+  word-break: break-all;
+  color: var(--blue);
+}
+.qr.small {
+  max-width: 200px;
+}
+details {
+  margin-top: 12px;
+  font-size: 17px;
+}
+summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--blue);
+}
+.adapter {
+  margin: 14px 0 4px;
+  font-weight: 700;
+}

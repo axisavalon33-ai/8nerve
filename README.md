@@ -51,19 +51,20 @@ media/ear/digits/si/0..9
 npm start
 ```
 
-You will see something like:
+- The **host page opens by itself** in the laptop's browser (`https://localhost:8443/ear/host`).
+  The first time, click **Advanced → Proceed** and enter the PIN (default **2468**).
+- At the top of the host page are **QR codes** for the **Tablet** and the **VR phone**. On each device, open the Camera app
+  (or Google Lens), point it at its QR code and tap the link. No typing needed.
+- The black window also shows a QR code and the addresses.
 
-```
-Ear & Balance is running. Open these addresses:
-  Tablet:   https://192.168.1.20:8443/ear
-  VR phone: https://192.168.1.20:8443/vr
-  Host:     https://192.168.1.20:8443/ear/host
-  Record:   https://192.168.1.20:8443/ear/record
-```
-
-Leave this window open. Press **Ctrl + C** to stop the server.
+Leave the black window open. Press **Ctrl + C** to stop the server.
 
 - **Windows firewall:** the first time, Windows asks whether Node.js may use the network – tick **Private networks** and click **Allow**.
+  If the tablet still cannot open the page, right-click **`allow-firewall-windows.cmd`** in the project folder →
+  **Run as administrator**. It opens ports 8443 and 8080 for the station.
+- If the QR code does not work, open *"QR codes not working? Try another address"* on the host page – laptops often have extra
+  virtual network adapters (WSL, VirtualBox, VPN); the real Wi-Fi address is listed first. You can also force one with
+  `set EAR_HOST_IP=192.168.1.20` before `npm start`.
 - **Use a fixed IP address** for the laptop if you can (in the router settings: "DHCP reservation"). If the address changes,
   a new certificate is made automatically and you must accept it again on each device (step 4).
 
@@ -199,11 +200,11 @@ when the phone is held sideways in a VR box.
 ```
 npm test
 ```
-30 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
+32 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
 the noise generator, silence trimming/normalising, the WAV file, the nystagmus timing, BPPV (right tilt only, delay, build-up and
 fade, ends by itself), the 20 s limit and ramp, oscillopsia (still head = still picture), the head-tilt maths, the server API, the
 PIN protection, anonymous result saving, settings limits, digit upload, STOP from tablet → phone, headset calibration (limits,
-saving, live to the phone), that Three.js is served locally, and that every translation key
+saving, live to the phone), that Three.js is served locally, the QR-code addresses, and that every translation key
 exists in EN/TA/SI with your exact texts.
 
 ### Quick test on the laptop only
@@ -258,5 +259,5 @@ test/              automatic tests (npm test)
 | Phone says "Camera permission refused" | In Chrome: lock icon → Permissions → Camera → Allow, then reload. The page must be `https://`. |
 | Two pictures don't join / lines look bent in the headset | Calibrate: hold the tablet's top-right corner for 3 s (see step 5). |
 | BPPV never starts | Host page → *Head tilt* must become positive (> 30) when tilting right. Otherwise tick *Invert head tilt*. |
-| Devices cannot open the page | Same Wi-Fi? Correct IP (look at the `npm start` window)? Windows firewall allowed? |
+| Devices cannot open the page | Same Wi-Fi (not a guest network)? Run `allow-firewall-windows.cmd` as administrator. Try the other addresses on the host page. |
 | "Your connection is not private" again | The laptop's IP address changed – accept the certificate again, or give the laptop a fixed IP. |

@@ -1,25 +1,15 @@
 // Creates (once) a self-signed HTTPS certificate for this laptop.
 // Phones and tablets need HTTPS for the camera, microphone and motion sensors.
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const selfsigned = require('selfsigned');
-
-function lanAddresses() {
-  const ips = [];
-  for (const list of Object.values(os.networkInterfaces())) {
-    for (const a of list || []) {
-      if (a.family === 'IPv4' && !a.internal) ips.push(a.address);
-    }
-  }
-  return ips;
-}
+const { lanAddresses } = require('./network');
 
 async function loadOrCreateCert(certDir) {
   const keyFile = path.join(certDir, 'key.pem');
   const certFile = path.join(certDir, 'cert.pem');
   const metaFile = path.join(certDir, 'meta.json');
-  const ips = lanAddresses();
+  const ips = lanAddresses().map((a) => a.ip);
 
   // Re-use the existing certificate if it already covers every current IP address.
   try {
@@ -63,4 +53,4 @@ async function loadOrCreateCert(certDir) {
   return { key: pems.private, cert: pems.cert, created: true, ips };
 }
 
-module.exports = { loadOrCreateCert, lanAddresses };
+module.exports = { loadOrCreateCert };

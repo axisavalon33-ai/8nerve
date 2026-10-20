@@ -163,3 +163,21 @@ test('Three.js is served locally (offline)', async () => {
   assert.equal((await fetch(base + '/vendor/three/three.module.min.js')).status, 200);
   assert.equal((await fetch(base + '/vendor/three/three.core.min.js')).status, 200);
 });
+
+test('host page gets the laptop addresses with QR codes (PIN only)', async () => {
+  assert.equal((await json('/api/host/links')).status, 401);
+  const { body } = await json('/api/host/links', { headers: PIN });
+  assert.ok(Array.isArray(body.addresses));
+  for (const a of body.addresses) {
+    assert.match(a.urls.tablet, /^https:\/\/[\d.]+:8443\/ear$/);
+    assert.match(a.urls.vr, /\/vr$/);
+    assert.match(a.qr.tablet, /^<svg/);
+  }
+});
+
+test('real Wi-Fi addresses are preferred over virtual adapters', () => {
+  const { score } = require('../server/network');
+  assert.ok(score('192.168.1.20', 'Wi-Fi') > score('172.24.48.1', 'vEthernet (WSL)'));
+  assert.ok(score('192.168.0.5', 'wlan0') > score('192.168.56.1', 'VirtualBox Host-Only Network'));
+  assert.ok(score('10.0.0.8', 'Ethernet') > score('10.8.0.2', 'OpenVPN TAP'));
+});

@@ -21,6 +21,31 @@
     <div class="wrap hidden" id="main">
       <h1>Ear &amp; Balance – Host</h1>
 
+      <div class="card connect">
+        <h2>Connect the tablet and the VR phone</h2>
+        <p class="small-note">
+          On the tablet / phone: open the <b>Camera</b> app (or Google Lens) and point it at the QR code, then tap the link.
+          If Chrome says <i>"Your connection is not private"</i>, tap <b>Advanced → Proceed</b> (it is your own laptop).
+          The devices must be on the <b>same Wi-Fi</b> as this laptop.
+        </p>
+        <div id="qrMain" class="qr-row"></div>
+        <details id="qrOtherWrap" class="hidden">
+          <summary>QR codes not working? Try another address of this laptop</summary>
+          <div id="qrOther"></div>
+        </details>
+        <details>
+          <summary>Still not connecting?</summary>
+          <ul class="small-note">
+            <li>Check the tablet and phone are on the <b>same Wi-Fi</b> as the laptop (not a "guest" network – guest networks block devices from seeing each other).</li>
+            <li><b>Windows Firewall (most common cause):</b> in the project folder, right-click <code>allow-firewall-windows.cmd</code> →
+              <i>Run as administrator</i>. Or: Start → type <i>Allow an app through Windows Firewall</i> → <i>Change settings</i> → tick <b>Node.js</b> for <b>Private</b> (and Public) → OK.
+              Also set the Wi-Fi to <i>Private network</i> (Settings → Network → Wi-Fi → your network → Private).</li>
+            <li>Using a phone hotspot? Some hotspots block devices from reaching each other – try a small pocket router instead.</li>
+            <li>After changing Wi-Fi, stop the server (Ctrl+C) and run <code>npm start</code> again – new QR codes appear.</li>
+          </ul>
+        </details>
+      </div>
+
       <div class="grid">
         <div class="card">
           <h2><span class="dot" id="tabDot"></span>Tablet (/ear)</h2>

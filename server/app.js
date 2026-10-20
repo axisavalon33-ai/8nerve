@@ -3,9 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
+const QRCode = require('qrcode');
 const { Server } = require('socket.io');
 const { SettingsStore, CONDITIONS, CAL_DEFAULTS, bandFor } = require('./settings');
 const { ResultsStore } = require('./results');
+const { lanAddresses } = require('./network');
 
 const LANGS = ['en', 'ta', 'si'];
 const AUDIO_EXTS = ['mp3', 'wav', 'webm', 'ogg', 'm4a']; // first one found is used
@@ -17,7 +19,8 @@ function pinMatches(given, pin) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-function createApp({ dataDir, mediaDir }) {
+// links: how other devices reach this server, e.g. { protocol: 'https', port: 8443 }
+function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 } }) {
   const settings = new SettingsStore(dataDir);
   const results = new ResultsStore(dataDir);
   const app = express();
@@ -94,6 +97,22 @@ function createApp({ dataDir, mediaDir }) {
     io.emit('settings', settings.publicView());
     res.json(value);
   });
+  // Addresses of this laptop with QR codes, so the tablet and phone can simply scan to connect.
+  app.get('/api/host/links', requirePin, async (req, res) => {
+    const pages = { tablet: '/ear', vr: '/vr', record: '/ear/record', host: '/ear/host' };
+    const out = [];
+    for (const a of lanAddresses()) {
+      const base = `${links.protocol}://${a.ip}:${links.port}`;
+      const entry = { ip: a.ip, adapter: a.name, likely: a.likely, urls: {}, qr: {} };
+      for (const [k, p] of Object.entries(pages)) {
+        entry.urls[k] = base + p;
+        entry.qr[k] = await QRCode.toString(base + p, { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
+      }
+      out.push(entry);
+    }
+    res.json({ addresses: out, port: links.port, protocol: links.protocol });
+  });
+
   app.get('/api/host/results', requirePin, (req, res) => res.json(results.summary()));
   app.get('/api/host/results.csv', (req, res) => {
     // Opened as a normal link, so the PIN comes in the query string.
