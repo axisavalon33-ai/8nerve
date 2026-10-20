@@ -152,10 +152,11 @@ test('BPPV ends by itself if the head is never tilted', () => {
   assert.equal(ep.reason, 'noTilt');
 });
 
-test('timed conditions: gentle 3 s ramp, never longer than 20 s, limited movement', () => {
+test('timed conditions: gentle 3 s ramp, set length (max 60 s), limited movement', () => {
+  assert.equal(new Effects.Episode({ condition: 'neuritis', intensity: 0.35, duration: 999 }, 0).o.duration, 60, 'capped at 60 s');
+  assert.equal(new Effects.Episode({ condition: 'neuritis', intensity: 0.35 }, 0).o.duration, 30, 'default 30 s');
   for (const condition of ['neuritis', 'menieres', 'oscillopsia']) {
-    const ep = new Effects.Episode({ condition, intensity: 0.35, duration: 60, rampSec: 3 }, 0);
-    assert.equal(ep.o.duration, 20, 'duration is capped at 20 s');
+    const ep = new Effects.Episode({ condition, intensity: 0.35, duration: 20, rampSec: 3 }, 0);
     const early = ep.update(100, { yawRate: 200 });
     assert.ok(Math.abs(early.dx) < 0.01, `${condition} starts gently`);
     let done = false;
@@ -168,14 +169,40 @@ test('timed conditions: gentle 3 s ramp, never longer than 20 s, limited movemen
   }
 });
 
-test('oscillopsia: still head = still picture', () => {
-  const ep = new Effects.Episode({ condition: 'oscillopsia', intensity: 1, duration: 20 }, 0);
+test('oscillopsia: still head = still picture; normal head turns give a clear bounce at LOW intensity', () => {
+  const ep = new Effects.Episode({ condition: 'oscillopsia', intensity: 0.35, duration: 30, sensitivity: 1 }, 0);
   let o;
   for (let t = 0; t < 8000; t += 16) o = ep.update(t, { yawRate: 0, pitchRate: 0 });
   assert.equal(o.dx, 0);
   assert.equal(o.dy, 0);
-  for (let t = 8000; t < 8500; t += 16) o = ep.update(t, { yawRate: 120, pitchRate: 0 });
-  assert.ok(Math.abs(o.dx) > 0.05, 'moves when the head turns');
+  // a normal head turn: ~60 °/s for half a second
+  let peak = 0;
+  for (let t = 8000; t < 8500; t += 16) {
+    o = ep.update(t, { yawRate: 60, pitchRate: 0 });
+    peak = Math.max(peak, Math.abs(o.dx));
+  }
+  assert.ok(peak > 0.06, `clearly visible shift (${peak.toFixed(3)} of the view)`);
+  // head stops: the picture overshoots (bounce) and settles back to still
+  let crossed = false;
+  for (let t = 8500; t < 11000; t += 16) {
+    o = ep.update(t, { yawRate: 0, pitchRate: 0 });
+    if (o.dx < -0.002) crossed = true;
+  }
+  assert.ok(crossed, 'bounces past the centre');
+  assert.ok(Math.abs(o.dx) < 0.002, 'settles when the head is still');
+  // sensitivity 0 = nothing
+  const off = new Effects.Episode({ condition: 'oscillopsia', intensity: 0.35, duration: 30, sensitivity: 0 }, 0);
+  for (let t = 0; t < 6000; t += 16) o = off.update(t, { yawRate: 100 });
+  assert.equal(o.dx, 0);
+});
+
+test('turning speed from orientation changes (phones without a gyroscope)', () => {
+  const track = Effects.orientationRateTracker();
+  assert.equal(track({ alpha: 10, beta: 0, gamma: 80 }, 0, 90), null);
+  const r = track({ alpha: 16, beta: 0, gamma: 80 }, 100, 90); // 6° in 0.1 s
+  assert.ok(Math.abs(r.yawRate - 60) < 1e-9);
+  const wrap = track({ alpha: 354, beta: 0, gamma: 80 }, 200, 90); // 16° -> 354°: −22° (shortest way)
+  assert.ok(Math.abs(wrap.yawRate - -220) < 1e-9);
 });
 
 test('head roll from gravity (landscape phone in a VR box)', () => {

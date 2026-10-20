@@ -1,16 +1,20 @@
 // VR phone (/vr): rear camera in a two-eye headset view (Three.js shader) with balance-disorder effects.
 import { HeadsetRenderer } from './renderer.js';
 import { openCamera, isPermissionError } from './camera.js';
+import { SoundFx } from './sound.js';
+import { sayInstruction, stopVoice, availableVoices } from './voice.js';
 
 const Effects = window.Effects;
 const I18n = window.I18n;
+const Kiosk = window.Kiosk;
 const video = document.getElementById('cam');
 const setup = document.getElementById('setup');
 const setupStatus = document.getElementById('setupStatus');
+const sensorWarn = document.getElementById('sensorWarn');
 const exitBtn = document.getElementById('exitBtn');
 
-const AUDIO_CAP = 0.25; // hard safety limit for Ménière's sounds (0..1 of full scale)
 const CAMERA_RETRY_MS = 4000;
+const SENSOR_STALE_MS = 1500;
 const FONT = "'Noto Sans', 'Noto Sans Tamil', 'Noto Sans Sinhala', sans-serif";
 
 const view = new HeadsetRenderer(document.getElementById('view'));
@@ -19,14 +23,19 @@ const st = {
   ready: false,
   camera: 'off', // off | ok | error | denied
   camRes: null,
-  sensors: false,
   episode: null,
   state: 'idle', // idle | waiting | running | stopped | ended
   condition: null,
   lang: 'en',
+  // head movement
   tilt: 0,
   yawRate: 0,
   pitchRate: 0,
+  rollRate: 0,
+  lastGyroAt: 0,
+  lastOrientAt: 0,
+  lastAccelAt: 0,
+  motionPermission: 'not-asked', // not-asked | granted | denied | not-needed
   fps: 0,
   message: null, // { key, since, position }
   lastOffset: { x: 0, y: 0 },
@@ -34,68 +43,64 @@ const st = {
   cal: null,
   testPattern: false,
 };
-let wakeLock = null;
-let audio = null;
+let sound = null;
 let retryTimer = null;
+const orientationRates = Effects.orientationRateTracker();
 
 // ---------------- setup ----------------
+Kiosk.init({ landscape: true, auto: false, label: () => I18n.t('fullscreen.return', null, st.lang) });
+Kiosk.suppress(true); // no "return to fullscreen" button on the setup screen
 document.getElementById('startBtn').addEventListener('click', start);
 exitBtn.addEventListener('click', () => {
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   setup.classList.remove('hidden');
   exitBtn.classList.add('hidden');
+  Kiosk.suppress(true);
 });
 
 async function start() {
   setupStatus.textContent = 'Starting…';
-  // Fullscreen + landscape + keep the screen awake.
-  try {
-    await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-  } catch {
-    /* not supported (e.g. iPhone) */
-  }
-  try {
-    await screen.orientation.lock('landscape');
-  } catch {
-    /* not supported */
-  }
-  await keepAwake();
-
-  // Motion sensors (iPhone needs permission; Android just works over HTTPS).
-  try {
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      await DeviceMotionEvent.requestPermission();
-    }
-  } catch {
-    /* ignore */
-  }
+  // Everything that needs a tap happens here: motion sensor permission, sound, fullscreen, landscape, wake lock.
+  await askMotionPermission();
   window.addEventListener('devicemotion', onMotion);
-
-  // Sound (unlocked by this tap).
+  window.addEventListener('deviceorientation', onOrientation);
   try {
-    setupAudio();
+    if (!sound) sound = new SoundFx();
+    sound.resume();
   } catch (e) {
-    console.warn(e);
+    console.warn('No sound', e);
   }
+  await Kiosk.enter();
+  Kiosk.suppress(false);
 
   await document.fonts.ready;
-  await startCamera();
+  if (st.camera !== 'ok') await startCamera();
   st.ready = true;
   setup.classList.add('hidden');
   exitBtn.classList.remove('hidden');
   sendStatus();
+  // Warn on the setup screen (seen when the helper comes back to it) if no motion data arrives.
+  setTimeout(() => {
+    const ok = sensorSource() !== 'none';
+    sensorWarn.classList.toggle('hidden', ok);
+    sendStatus();
+  }, 2500);
 }
 
-async function keepAwake() {
+async function askMotionPermission() {
+  // iPhone/iPad: an explicit permission request is needed (only allowed inside a tap).
+  const needs = [window.DeviceMotionEvent, window.DeviceOrientationEvent].filter((E) => E && typeof E.requestPermission === 'function');
+  if (!needs.length) {
+    st.motionPermission = 'not-needed'; // Android Chrome: allowed for HTTPS pages unless blocked in site settings
+    return;
+  }
   try {
-    if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    const results = await Promise.all(needs.map((E) => E.requestPermission()));
+    st.motionPermission = results.every((r) => r === 'granted') ? 'granted' : 'denied';
   } catch {
-    /* ignore */
+    st.motionPermission = 'denied';
   }
 }
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && st.ready) keepAwake();
-});
 
 // ---------------- camera ----------------
 async function startCamera() {
@@ -129,80 +134,62 @@ function cameraFailed(err) {
 video.addEventListener('error', () => st.camera === 'ok' && cameraFailed(new Error('Video element error')));
 
 // ---------------- sensors ----------------
-let lastSensorSend = 0;
+function screenAngle() {
+  return (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+}
+
 function onMotion(e) {
+  const now = performance.now();
   const a = e.accelerationIncludingGravity;
-  const angle = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
-  if (a && a.x !== null) {
-    st.sensors = true;
-    let roll = Effects.headRoll(a.x, a.y, angle);
+  if (a && a.x !== null && a.y !== null) {
+    st.lastAccelAt = now;
+    let roll = Effects.headRoll(a.x, a.y, screenAngle());
     if (st.settings && st.settings.vr.invertTilt) roll = -roll;
     st.tilt = st.tilt * 0.8 + roll * 0.2; // smooth
   }
   const r = e.rotationRate;
-  if (r && r.beta !== null) {
-    const rates = Effects.headRates(r.beta, r.gamma, angle);
-    st.yawRate = rates.yawRate;
-    st.pitchRate = rates.pitchRate;
-  }
-  if (performance.now() - lastSensorSend > 500) {
-    lastSensorSend = performance.now();
-    sendStatus();
+  if (r && r.beta !== null && r.gamma !== null) {
+    st.lastGyroAt = now;
+    const rates = Effects.headRates(r.beta, r.gamma, screenAngle(), r.alpha);
+    smoothRates(rates, 0.5);
   }
 }
 
-// ---------------- sound (Ménière's) ----------------
-function setupAudio() {
-  const AC = window.AudioContext || window.webkitAudioContext;
-  const ac = new AC();
-  const master = ac.createGain();
-  master.gain.value = 0;
-  master.connect(ac.destination);
-  // Muffled roar: brown noise through a low-pass filter.
-  const len = ac.sampleRate * 4;
-  const buf = ac.createBuffer(1, len, ac.sampleRate);
-  const d = buf.getChannelData(0);
-  let last = 0;
-  for (let i = 0; i < len; i++) {
-    last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
-    d[i] = last * 3.5;
-  }
-  const noise = ac.createBufferSource();
-  noise.buffer = buf;
-  noise.loop = true;
-  const lp = ac.createBiquadFilter();
-  lp.type = 'lowpass';
-  lp.frequency.value = 380;
-  const noiseGain = ac.createGain();
-  noiseGain.gain.value = 0.7;
-  noise.connect(lp).connect(noiseGain).connect(master);
-  noise.start();
-  // Soft ringing tone with a slow wobble.
-  const tone = ac.createOscillator();
-  tone.frequency.value = 2200;
-  const wobble = ac.createOscillator();
-  wobble.frequency.value = 0.4;
-  const wobbleDepth = ac.createGain();
-  wobbleDepth.gain.value = 6;
-  wobble.connect(wobbleDepth).connect(tone.frequency);
-  const toneGain = ac.createGain();
-  toneGain.gain.value = 0.08;
-  tone.connect(toneGain).connect(master);
-  tone.start();
-  wobble.start();
-  audio = { ac, master };
-}
-function setAudioLevel(level, instant) {
-  if (!audio) return;
-  const vol = st.settings ? st.settings.vr.menieresVolume : 0.5;
-  const target = Math.max(0, Math.min(1, level)) * vol * AUDIO_CAP;
-  audio.master.gain.setTargetAtTime(target, audio.ac.currentTime, instant ? 0.01 : 0.25);
+// Phones without a gyroscope: work out turning speed from orientation changes instead.
+function onOrientation(e) {
+  const now = performance.now();
+  if (e.alpha === null && e.beta === null) return;
+  st.lastOrientAt = now;
+  if (now - st.lastGyroAt < SENSOR_STALE_MS) return; // the gyroscope is better
+  const rates = orientationRates(e, now, screenAngle());
+  if (rates) smoothRates(rates, 0.4);
 }
 
-// ---------------- control from the tablet ----------------
+function smoothRates(r, k) {
+  st.yawRate += (r.yawRate - st.yawRate) * k;
+  st.pitchRate += (r.pitchRate - st.pitchRate) * k;
+  st.rollRate += (r.rollRate - st.rollRate) * k;
+}
+
+function sensorSource() {
+  const now = performance.now();
+  if (now - st.lastGyroAt < SENSOR_STALE_MS) return 'gyro';
+  if (now - st.lastOrientAt < SENSOR_STALE_MS) return 'orientation';
+  if (now - st.lastAccelAt < SENSOR_STALE_MS) return 'tilt-only';
+  return 'none';
+}
+
+// ---------------- control from the tablet / host ----------------
+function vol() {
+  const v = (st.settings && st.settings.vr) || {};
+  return { tinnitusVolume: v.tinnitusVolume ?? 0.3, muffledVolume: v.muffledVolume ?? 0.5 };
+}
+
 socket.on('settings', (s) => {
   st.settings = s;
   if (!st.cal && s.vrCal) applyCal(s.vrCal, st.testPattern);
+  // The sensitivity slider works while oscillopsia is running.
+  if (st.episode) st.episode.o.sensitivity = s.vr.oscillopsiaSensitivity;
 });
 socket.on('vr:cal', (msg) => applyCal(msg.cal, msg.testPattern));
 function applyCal(cal, testPattern) {
@@ -232,53 +219,75 @@ socket.on('vr:start', (msg) => {
       bppvTiltDeg: v.bppvTiltDeg,
       bppvLatencySec: v.bppvLatencySec,
       bppvWaitMaxSec: v.bppvWaitMaxSec,
+      sensitivity: v.oscillopsiaSensitivity,
     },
     performance.now(),
   );
-  if (audio && audio.ac.state === 'suspended') audio.ac.resume();
+  if (sound) sound.resume();
+  sayInstruction(I18n.t(`vr.${msg.condition}.say`, null, st.lang), st.lang, msg.voiceUrl);
   st.state = msg.condition === 'bppv' ? 'waiting' : 'running';
   st.message = msg.condition === 'bppv' ? { key: 'vr.tiltHint', since: performance.now(), position: 'low' } : null;
   sendStatus();
 });
 
-// STOP: immediately calm and still. No fade of the picture; sound off at once.
+// STOP: immediately calm and still. No fade of the picture; sound and voice off at once.
 socket.on('vr:stop', (msg) => {
   if (msg && msg.lang) st.lang = msg.lang;
   const was = st.state;
   st.episode = null;
-  setAudioLevel(0, true);
+  if (sound) sound.set(0, vol(), true);
+  stopVoice();
   st.state = 'stopped';
   st.lastOffset = { x: 0, y: 0 };
   if (was !== 'idle') st.message = { key: 'vr.takeOff', since: performance.now() };
   sendStatus();
 });
 
+// Host page checks
+socket.on('vr:testSound', (msg) => {
+  if (!sound || st.episode) return; // never during a condition
+  sound.test(msg.kind, vol());
+});
+socket.on('vr:say', (msg) => {
+  if (st.episode) return;
+  sayInstruction(I18n.t(`vr.${msg.condition}.say`, null, msg.lang), msg.lang, msg.voiceUrl);
+});
+
 function endEpisode(reason) {
   const cond = st.condition;
   st.episode = null;
-  setAudioLevel(0, false);
+  if (sound) sound.set(0, vol(), false); // gentle fade out
   st.state = 'ended';
   st.message = { key: 'vr.takeOff', since: performance.now() };
   socket.emit('vr:ended', { condition: cond, reason });
   sendStatus();
 }
 
+const r1 = (x) => Math.round(x * 10) / 10;
 function sendStatus() {
   const p = st.episode ? st.episode.progress(performance.now()) : { elapsed: 0, duration: 0 };
+  const src = sensorSource();
   socket.emit('vr:status', {
     ready: st.ready,
     state: st.state,
     condition: st.condition,
     camera: st.camera,
     camRes: st.camRes,
-    sensors: st.sensors,
+    sensors: src !== 'none',
+    sensorSource: src,
+    motionPermission: st.motionPermission,
     tilt: Math.round(st.tilt),
+    yawRate: r1(st.yawRate),
+    pitchRate: r1(st.pitchRate),
+    rollRate: r1(st.rollRate),
+    voices: availableVoices(),
+    fullscreen: Kiosk.isFullscreen(),
     fps: st.fps,
-    elapsed: Math.round(p.elapsed * 10) / 10,
+    elapsed: r1(p.elapsed),
     duration: p.duration,
   });
 }
-setInterval(sendStatus, 1000);
+setInterval(sendStatus, 250); // live head-movement values on the host page
 
 // ---------------- drawing ----------------
 let frames = 0;
@@ -292,16 +301,18 @@ function frame(now) {
     frames = 0;
     fpsStart = now;
   }
+  // Rates decay to zero if the sensors go quiet, so the picture never stays shifted.
+  if (sensorSource() === 'none' || sensorSource() === 'tilt-only') smoothRates({ yawRate: 0, pitchRate: 0, rollRate: 0 }, 0.2);
 
   let fx = { dx: 0, dy: 0, roll: 0, audio: 0 };
   if (st.episode) {
-    fx = st.episode.update(now, { tilt: st.tilt, yawRate: st.yawRate, pitchRate: st.pitchRate });
+    fx = st.episode.update(now, { tilt: st.tilt, yawRate: st.yawRate, pitchRate: st.pitchRate, rollRate: st.rollRate });
     if (fx.phase === 'running' && st.state === 'waiting') {
       st.state = 'running';
       st.message = null;
       sendStatus();
     }
-    setAudioLevel(fx.audio, false);
+    if (sound) sound.set(fx.audio, vol(), false);
     if (fx.done) endEpisode(st.episode.reason);
   }
 
@@ -331,3 +342,4 @@ function frame(now) {
 I18n.load().catch(() => {});
 requestAnimationFrame(frame);
 window.__vr = st; // for automated tests
+window.__snd = () => sound && { tinnitus: sound.tinGain.gain.value, muffled: sound.mufGain.gain.value, testing: sound.ac.currentTime < sound.testUntil };

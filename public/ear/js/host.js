@@ -15,7 +15,9 @@
     });
     socket.on('status', renderStatus);
     socket.on('results', renderResults);
-    socket.on('digits', renderDigits);
+    socket.on('digitStatus', (st) => renderDigitAudio({ status: st, espeak: lastDigitInfo.espeak }));
+    socket.on('settings', (pub) => renderLive(pub));
+    hostSocket = socket;
     $('#hostStop').addEventListener('click', () => socket.emit('vr:stop', {}));
     $('#csvLink').href = '/api/host/results.csv?pin=' + encodeURIComponent(Staff.pin);
 
@@ -32,7 +34,312 @@
 
     Staff.api('/api/host/settings').then(fillForm);
     Staff.api('/api/host/links').then(renderLinks);
-    fetch('/api/ear/digits').then((r) => r.json()).then(renderDigits);
+    I18n.load().then(loadVoices);
+    fetch('/api/ear/digits/status').then((r) => r.json()).then(renderDigitAudio);
+    setupLive();
+    $('#regenDigits').addEventListener('click', async () => {
+      const btn = $('#regenDigits');
+      btn.disabled = true;
+      btn.textContent = 'Making digits…';
+      try {
+        const r = await Staff.api('/api/host/digits/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"force":true}' });
+        renderDigitAudio({ status: r.status, espeak: true });
+      } catch (e) {
+        alert('Could not make the digits: ' + e.message);
+      }
+      btn.disabled = false;
+      btn.textContent = 'Make generated digits again';
+    });
+  }
+
+  let hostSocket = null;
+  let lastDigitInfo = { espeak: true };
+  const CONDS = ['bppv', 'neuritis', 'menieres', 'oscillopsia'];
+  const LANGS = ['en', 'ta', 'si'];
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  };
+  const button = (text, onClick, cls = 'mini') => {
+    const b = el('button', cls, text);
+    b.type = 'button';
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  // "Upload MP3" button: a hidden file input inside a label.
+  const fileButton = (text, onFile) => {
+    const l = el('label', 'mini file-btn', text);
+    const input = el('input');
+    input.type = 'file';
+    input.accept = 'audio/*,.mp3,.m4a,.wav,.ogg';
+    input.addEventListener('change', () => input.files[0] && onFile(input.files[0]).finally(() => (input.value = '')));
+    l.appendChild(input);
+    return l;
+  };
+  function playUrl(url) {
+    const a = new Audio(url);
+    a.play().catch((e) => alert('Cannot play: ' + e.message));
+  }
+
+  // ---------- live VR controls (saved at once) ----------
+  let saveTimer = null;
+  let pending = {};
+  function saveLive(patch) {
+    // merge quick changes (e.g. dragging a slider) into one save every 200 ms
+    pending = deepMerge(pending, patch);
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      const body = JSON.stringify(pending);
+      pending = {};
+      try {
+        await Staff.api('/api/host/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body });
+      } catch (e) {
+        alert('Could not save: ' + e.message);
+      }
+    }, 200);
+  }
+  function deepMerge(a, b) {
+    const out = { ...a };
+    for (const [k, v] of Object.entries(b)) out[k] = v && typeof v === 'object' ? deepMerge(a[k] || {}, v) : v;
+    return out;
+  }
+
+  let live = null; // last public settings
+  function setupLive() {
+    const wrap = $('#durations');
+    for (const c of CONDS) {
+      const row = el('div', 'dur');
+      row.append(el('span', '', COND_NAMES[c]));
+      const pm = el('div', 'pm');
+      const minus = button('−', () => changeDur(c, -5), '');
+      const out = el('output');
+      out.id = 'dur-' + c;
+      const plus = button('+', () => changeDur(c, 5), '');
+      minus.dataset.dur = c + ':-';
+      plus.dataset.dur = c + ':+';
+      pm.append(minus, out, plus);
+      row.append(pm);
+      wrap.append(row);
+    }
+    const slider = (id, outId, key, fmt, scale) => {
+      $(id).addEventListener('input', () => {
+        const v = Number($(id).value) / scale;
+        $(outId).textContent = fmt(v);
+        saveLive({ vr: { [key]: v } });
+      });
+    };
+    slider('#tinVol', '#tinVolOut', 'tinnitusVolume', (v) => Math.round(v * 100) + '%', 100);
+    slider('#mufVol', '#mufVolOut', 'muffledVolume', (v) => Math.round(v * 100) + '%', 100);
+    slider('#oscSens', '#oscSensOut', 'oscillopsiaSensitivity', (v) => '×' + v.toFixed(1), 1);
+    document.querySelectorAll('[data-test-sound]').forEach((b) =>
+      b.addEventListener('click', () => hostSocket && hostSocket.emit('vr:testSound', { kind: b.dataset.testSound })),
+    );
+  }
+  function changeDur(c, step) {
+    if (!live) return;
+    const cur = live.vr.durations[c];
+    const next = Math.min(60, Math.max(10, cur + step));
+    live.vr.durations[c] = next;
+    renderLive(live);
+    saveLive({ vr: { durations: { [c]: next } } });
+  }
+  function renderLive(pub) {
+    live = JSON.parse(JSON.stringify(pub));
+    for (const c of CONDS) {
+      const v = pub.vr.durations[c];
+      $('#dur-' + c).textContent = v + ' s';
+      document.querySelector(`[data-dur="${c}:-"]`).disabled = v <= 10;
+      document.querySelector(`[data-dur="${c}:+"]`).disabled = v >= 60;
+    }
+    // don't move a slider while it is being dragged
+    const setSlider = (id, outId, v, scale, fmt) => {
+      if (document.activeElement === $(id)) return;
+      $(id).value = v * scale;
+      $(outId).textContent = fmt(v);
+    };
+    setSlider('#tinVol', '#tinVolOut', pub.vr.tinnitusVolume, 100, (v) => Math.round(v * 100) + '%');
+    setSlider('#mufVol', '#mufVolOut', pub.vr.muffledVolume, 100, (v) => Math.round(v * 100) + '%');
+    setSlider('#oscSens', '#oscSensOut', pub.vr.oscillopsiaSensitivity, 1, (v) => '×' + Number(v).toFixed(1));
+  }
+
+  // ---------- head movement ----------
+  function meter(bar, val, v, max, unit) {
+    const f = Math.max(-1, Math.min(1, (v || 0) / max));
+    const i = $(bar);
+    i.style.left = (f < 0 ? 50 + f * 50 : 50) + '%';
+    i.style.width = Math.abs(f) * 50 + '%';
+    $(val).textContent = v === undefined ? '–' : (v > 0 ? '+' : '') + Math.round(v) + unit;
+  }
+  function renderMotion(vr) {
+    const SRC = {
+      gyro: 'Gyroscope ✓',
+      orientation: 'Orientation sensor (no gyroscope – works, a little less smooth)',
+      'tilt-only': 'Tilt only – this phone has no gyroscope/orientation sensor: oscillopsia cannot follow head turns',
+      none: 'No data',
+    };
+    $('#mSource').textContent = vr.connected ? SRC[vr.sensorSource] || '–' : 'Phone not connected';
+    $('#mPerm').textContent = { granted: 'Granted', denied: 'Refused', 'not-needed': 'Not needed (Android)', 'not-asked': 'Not asked yet – tap Start on the phone' }[vr.motionPermission] || '–';
+    meter('#barTilt', '#valTilt', vr.tilt, 60, '°');
+    meter('#barYaw', '#valYaw', vr.yawRate, 200, '');
+    meter('#barPitch', '#valPitch', vr.pitchRate, 200, '');
+    meter('#barRoll', '#valRoll', vr.rollRate, 200, '');
+    let warn = '';
+    if (vr.connected && vr.ready && (vr.sensorSource === 'none' || !vr.sensorSource)) {
+      warn =
+        vr.motionPermission === 'denied'
+          ? '⚠ Motion sensor permission was refused on the phone. Reload /vr and allow it when asked.'
+          : '⚠ No motion sensor data from the phone. On the phone in Chrome: ⋮ → Settings → Site settings → Motion sensors → Allow, then reload /vr. BPPV and oscillopsia need these sensors.';
+    } else if (vr.connected && vr.sensorSource === 'tilt-only') {
+      warn = '⚠ This phone reports tilt but no turning speed: BPPV works, but oscillopsia cannot respond to head turns.';
+    }
+    $('#sensorWarning').textContent = warn;
+    $('#sensorWarning').classList.toggle('hidden', !warn);
+  }
+
+  // ---------- spoken instructions ----------
+  let voiceFiles = {};
+  let phoneVoices = null;
+  async function loadVoices() {
+    voiceFiles = await fetch('/api/vr/voice').then((r) => r.json());
+    renderVoices();
+  }
+  function renderVoices() {
+    const tbody = $('#voiceTable');
+    tbody.innerHTML = '';
+    for (const c of CONDS) {
+      const tr = el('tr');
+      tr.append(el('td', '', COND_NAMES[c]));
+      for (const lang of LANGS) {
+        const td = el('td', 'voice-cell');
+        const url = voiceFiles[c] && voiceFiles[c][lang];
+        const noTts = phoneVoices && !phoneVoices[lang];
+        td.append(el('span', 'src' + (url ? ' mine' : ''), url ? 'My MP3' : noTts ? 'Phone voice – NOT available' : 'Phone voice (placeholder)'));
+        td.append(el('p', '', I18n.t(`vr.${c}.say`, null, lang)));
+        if (url) td.append(button('▶ Play here', () => playUrl(url)));
+        td.append(button('▶ On phone', () => hostSocket && hostSocket.emit('vr:say', { condition: c, lang })));
+        td.append(
+          fileButton('⬆ Upload MP3', async (file) => {
+            const ext = (file.name.split('.').pop() || 'mp3').toLowerCase();
+            voiceFiles = await Staff.api(`/api/vr/voice/${c}/${lang}?ext=${encodeURIComponent(ext)}`, { method: 'PUT', body: file });
+            renderVoices();
+          }),
+        );
+        if (url)
+          td.append(
+            button(
+              '↺ Use phone voice',
+              async () => {
+                voiceFiles = await Staff.api(`/api/vr/voice/${c}/${lang}`, { method: 'DELETE' });
+                renderVoices();
+              },
+              'mini danger',
+            ),
+          );
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
+    if (phoneVoices) {
+      const list = LANGS.map((l) => `${LANG_NAMES[l]} ${phoneVoices[l] ? '✓' : '✗'}`).join(' · ');
+      $('#voiceInfo').textContent = `Phone text-to-speech voices: ${list}. Where a voice is missing (✗), the phone stays silent – upload an MP3 for that language.`;
+    }
+  }
+
+  // ---------- digit audio ----------
+  function renderDigitAudio(info) {
+    lastDigitInfo = info;
+    const st = info.status;
+    const wrap = $('#digitLangs');
+    wrap.innerHTML = '';
+    const warnings = [];
+    for (const lang of LANGS) {
+      const s = st[lang];
+      const block = el('div', 'lang-block');
+      const h = el('h3', '', LANG_NAMES[lang]);
+      block.append(h);
+      const inUse =
+        s.source === 'recorded'
+          ? 'In use: My recordings (10/10)'
+          : s.source === 'generated'
+            ? `In use: Generated digits (my recordings ${s.recordedCount}/10${s.recordedCount ? ' – used when all 10 are recorded' : ''})`
+            : 'In use: NONE – the hearing test cannot run in this language';
+      block.append(el('p', 'in-use', inUse));
+      if (!s.source) warnings.push(`${LANG_NAMES[lang]}: no complete digit set (recorded ${s.recordedCount}/10, generated ${s.generatedCount}/10).`);
+      else if (s.recordedCount > 0 && s.recordedCount < 10)
+        warnings.push(`${LANG_NAMES[lang]}: only ${s.recordedCount}/10 digits recorded – the generated set is used until all 10 are recorded.`);
+
+      const table = el('table', 'digit-table');
+      table.innerHTML = '<thead><tr><th>Digit</th><th>Source</th><th></th></tr></thead>';
+      const tbody = el('tbody');
+      for (let d = 0; d <= 9; d++) {
+        const tr = el('tr');
+        tr.append(el('td', '', String(d)));
+        const rec = s.recorded[d];
+        const gen = s.generated[d];
+        const tag = rec ? ['rec', 'My recording'] : gen ? ['gen', 'Generated'] : ['none', 'Missing'];
+        tr.append(el('td', 'src-tag ' + tag[0], tag[1]));
+        const acts = el('td');
+        if (rec || gen) acts.append(button('▶ Play', () => playUrl(rec || gen)));
+        const a = el('a', 'mini', '🎙 Replace with recording');
+        a.href = `/ear/record?lang=${lang}&digit=${d}`;
+        acts.append(a);
+        acts.append(fileButton('⬆ Upload MP3', (file) => uploadDigit(lang, d, file)));
+        tr.append(acts);
+        tbody.append(tr);
+      }
+      table.append(tbody);
+      block.append(table);
+      if (s.recordedCount) {
+        block.append(
+          button(
+            '↺ Reset to generated (delete my recordings)',
+            async () => {
+              if (!confirm(`Delete your ${s.recordedCount} recording(s) for ${LANG_NAMES[lang]} and use the generated digits?`)) return;
+              const r = await Staff.api(`/api/ear/digits/${lang}`, { method: 'DELETE' });
+              renderDigitAudio({ status: r.status, espeak: lastDigitInfo.espeak });
+            },
+            'mini danger',
+          ),
+        );
+      }
+      wrap.append(block);
+    }
+    if (info.espeak === false && Object.values(st).some((s) => s.generatedCount < 10)) {
+      warnings.unshift('espeak-ng is not installed on this laptop, so the generated digits cannot be made. See README → "Digit audio".');
+    }
+    $('#digitWarning').innerHTML = '';
+    warnings.forEach((w) => $('#digitWarning').append(el('div', '', '⚠ ' + w)));
+    $('#digitWarning').classList.toggle('hidden', !warnings.length);
+  }
+
+  // Uploaded MP3: trimmed and normalised in the browser exactly like a recording, then saved as WAV.
+  let audioCtx = null;
+  async function uploadDigit(lang, d, file) {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const buf = await audioCtx.decodeAudioData(await file.arrayBuffer());
+      const n = buf.length;
+      const mono = new Float32Array(n);
+      for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+        const data = buf.getChannelData(ch);
+        for (let i = 0; i < n; i++) mono[i] += data[i] / buf.numberOfChannels;
+      }
+      let mean = 0;
+      for (let i = 0; i < n; i++) mean += mono[i];
+      mean /= n || 1;
+      for (let i = 0; i < n; i++) mono[i] -= mean;
+      const processed = DSP.normalise(DSP.trimSilence(mono, buf.sampleRate), buf.sampleRate);
+      const r = await Staff.api(`/api/ear/digits/${lang}/${d}?ext=wav`, {
+        method: 'PUT',
+        headers: { 'content-type': 'audio/wav' },
+        body: DSP.encodeWav(processed, buf.sampleRate),
+      });
+      renderDigitAudio({ status: r.status, espeak: lastDigitInfo.espeak });
+    } catch (e) {
+      alert('Could not use this file: ' + e.message);
+    }
   }
 
   // ---------- status ----------
@@ -55,6 +362,12 @@
     const camText = { ok: 'OK' + (vr.camRes ? ` (${vr.camRes})` : ''), error: 'Not working – retrying every 4 s', denied: 'Permission refused – allow the camera in Chrome' };
     $('#vrCam').textContent = camText[vr.camera] || '–';
     $('#vrSensors').textContent = vr.sensors ? 'OK' : 'No data';
+    $('#vrFull').textContent = vr.fullscreen === undefined ? '–' : vr.fullscreen ? 'Yes' : 'No';
+    renderMotion(vr);
+    if (vr.voices && JSON.stringify(vr.voices) !== JSON.stringify(phoneVoices)) {
+      phoneVoices = vr.voices;
+      if (I18n.data['vr.bppv.say']) renderVoices();
+    }
     $('#vrState').textContent = vr.state || '–';
     $('#vrCond').textContent = COND_NAMES[vr.condition] || '–';
     $('#vrTilt').textContent = vr.tilt !== undefined ? (vr.tilt > 0 ? '+' : '') + vr.tilt + '°' : '–';
@@ -123,19 +436,7 @@
     }
   }
 
-  function renderDigits(m) {
-    const tbody = $('#digitTable');
-    tbody.innerHTML = '';
-    for (const lang of ['en', 'ta', 'si']) {
-      const have = Object.keys(m[lang] || {}).map(Number).sort();
-      const missing = [...Array(10).keys()].filter((d) => !have.includes(d));
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${LANG_NAMES[lang]}</td><td></td>`;
-      tr.lastChild.textContent = missing.length ? `${have.length}/10 – missing: ${missing.join(', ')}` : '10/10 ✓';
-      tr.lastChild.className = missing.length ? 'band-refer' : 'band-good';
-      tbody.appendChild(tr);
-    }
-  }
+
 
   // ---------- settings form (field names like "vr.durations.bppv") ----------
   function getPath(obj, path) {

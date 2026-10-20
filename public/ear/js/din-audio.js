@@ -35,9 +35,11 @@
     // Load the 10 digit recordings of one language and build matching speech-shaped noise.
     async load(lang, manifest) {
       this.unlock();
-      if (this.lang === lang && this.noise) return true;
       const urls = manifest[lang] || {};
       if (Object.keys(urls).length < 10) return false;
+      // Same set of files as last time (the URLs change when a file changes): nothing to reload.
+      const key = lang + JSON.stringify(urls);
+      if (this.loadedKey === key && this.noise) return true;
       const ctx = this.ctx;
       const entries = await Promise.all(
         Object.entries(urls).map(async ([d, url]) => {
@@ -56,6 +58,7 @@
       this.noise = ctx.createBuffer(1, data.length, sr);
       this.noise.copyToChannel(data, 0);
       this.lang = lang;
+      this.loadedKey = key;
       return true;
     }
 

@@ -6,17 +6,37 @@
   let lang = null;
   let stream = null;
   let ctx = null;
-  let manifest = {};
+  let manifest = {}; // my recordings only: { lang: { digit: url } }
+  const recordedOnly = (st) => Object.fromEntries(Object.entries(st).map(([l, v]) => [l, v.recorded]));
   const cards = {}; // digit -> { el, processed: Float32Array|null }
 
-  Staff.login(() => $('#main').classList.remove('hidden'));
+  // Fullscreen + screen awake from the first tap (the PIN button).
+  Kiosk.init();
+  Staff.login(() => {
+    $('#main').classList.remove('hidden');
+    // Opened from the host page ("Replace with recording"): /ear/record?lang=ta&digit=3
+    const q = new URLSearchParams(location.search);
+    const btn = q.get('lang') && document.querySelector(`[data-lang="${q.get('lang')}"]`);
+    if (btn) {
+      btn.click();
+      const d = q.get('digit');
+      if (/^[0-9]$/.test(d || '')) {
+        const show = () => {
+          if (!cards[d]) return setTimeout(show, 200);
+          cards[d].el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          cards[d].el.style.outline = '5px solid var(--violet)';
+        };
+        show();
+      }
+    }
+  });
 
   document.querySelectorAll('[data-lang]').forEach((b) =>
     b.addEventListener('click', async () => {
       document.querySelectorAll('[data-lang]').forEach((x) => x.classList.toggle('selected', x === b));
       lang = b.dataset.lang;
       if (!(await ensureMic())) return;
-      manifest = await fetch('/api/ear/digits').then((r) => r.json());
+      manifest = recordedOnly((await fetch('/api/ear/digits/status').then((r) => r.json())).status);
       buildCards();
       $('#recArea').classList.remove('hidden');
     }),
@@ -186,7 +206,7 @@
         headers: { 'content-type': 'audio/wav' },
         body: wav,
       });
-      manifest = res.manifest;
+      manifest = recordedOnly(res.status);
       c.processed = null;
       refreshCard(d);
     } catch (e) {

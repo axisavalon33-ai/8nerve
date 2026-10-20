@@ -8,9 +8,8 @@ const { Server } = require('socket.io');
 const { SettingsStore, CONDITIONS, CAL_DEFAULTS, bandFor } = require('./settings');
 const { ResultsStore } = require('./results');
 const { lanAddresses } = require('./network');
-
-const LANGS = ['en', 'ta', 'si'];
-const AUDIO_EXTS = ['mp3', 'wav', 'webm', 'ogg', 'm4a']; // first one found is used
+const { LANGS, AUDIO_EXTS, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus } = require('./media');
+const { generateDigits, findEspeak } = require('./digit-tts');
 const ROOT = path.join(__dirname, '..');
 
 function pinMatches(given, pin) {
@@ -47,6 +46,8 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   app.get('/api/config', (req, res) => res.json(settings.publicView()));
 
   app.get('/api/ear/digits', (req, res) => res.json(digitManifest(mediaDir)));
+  app.get('/api/ear/digits/status', async (req, res) => res.json({ status: digitStatus(mediaDir), espeak: !!(await findEspeak()), generating }));
+  app.get('/api/vr/voice', (req, res) => res.json(voiceStatus(mediaDir, CONDITIONS)));
 
   app.post('/api/ear/results', express.json({ limit: '10kb' }), (req, res) => {
     const { lang, srt } = req.body || {};
@@ -65,26 +66,75 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   });
 
   // ---------- PIN-protected API ----------
-  app.put(
-    '/api/ear/digits/:lang/:digit',
-    requirePin,
-    express.raw({ type: () => true, limit: '5mb' }),
-    (req, res) => {
-      const { lang, digit } = req.params;
-      const ext = String(req.query.ext || 'wav');
-      if (!LANGS.includes(lang) || !/^[0-9]$/.test(digit) || !AUDIO_EXTS.includes(ext)) {
-        return res.status(400).json({ error: 'Bad language, digit or file type' });
-      }
-      if (!req.body || !req.body.length) return res.status(400).json({ error: 'Empty recording' });
-      const dir = path.join(mediaDir, 'ear', 'digits', lang);
-      fs.mkdirSync(dir, { recursive: true });
-      // Remove older recordings of this digit in other formats so there is exactly one.
-      for (const e of AUDIO_EXTS) fs.rmSync(path.join(dir, `${digit}.${e}`), { force: true });
-      fs.writeFileSync(path.join(dir, `${digit}.${ext}`), req.body);
-      io.emit('digits', digitManifest(mediaDir));
-      res.json({ ok: true, manifest: digitManifest(mediaDir) });
-    },
-  );
+  const audioUpload = express.raw({ type: () => true, limit: '10mb' });
+  const digitsChanged = () => {
+    if (!io) return; // not attached yet (e.g. digits made while the server is starting)
+    io.emit('digits', digitManifest(mediaDir));
+    io.to('host').emit('digitStatus', digitStatus(mediaDir));
+  };
+
+  // My recording of one digit (from /ear/record, or an MP3 processed on the host page).
+  app.put('/api/ear/digits/:lang/:digit', requirePin, audioUpload, (req, res) => {
+    const { lang, digit } = req.params;
+    const ext = String(req.query.ext || 'wav');
+    if (!LANGS.includes(lang) || !/^[0-9]$/.test(digit) || !AUDIO_EXTS.includes(ext)) {
+      return res.status(400).json({ error: 'Bad language, digit or file type' });
+    }
+    if (!req.body || !req.body.length) return res.status(400).json({ error: 'Empty recording' });
+    const rel = path.join('ear', 'digits', lang);
+    fs.mkdirSync(path.join(mediaDir, rel), { recursive: true });
+    removeAudio(mediaDir, rel, digit); // exactly one file per digit
+    fs.writeFileSync(path.join(mediaDir, rel, `${digit}.${ext}`), req.body);
+    digitsChanged();
+    res.json({ ok: true, manifest: digitManifest(mediaDir), status: digitStatus(mediaDir) });
+  });
+
+  // "Reset to generated": delete my recordings of one language.
+  app.delete('/api/ear/digits/:lang', requirePin, (req, res) => {
+    const { lang } = req.params;
+    if (!LANGS.includes(lang)) return res.status(400).json({ error: 'Bad language' });
+    for (let d = 0; d <= 9; d++) removeAudio(mediaDir, path.join('ear', 'digits', lang), String(d));
+    digitsChanged();
+    res.json({ ok: true, status: digitStatus(mediaDir) });
+  });
+
+  // Make (or remake) the placeholder digits with espeak-ng.
+  let generating = false;
+  async function runGenerate(force) {
+    if (generating) return { ok: false, error: 'Already generating' };
+    generating = true;
+    try {
+      return await generateDigits(mediaDir, { force });
+    } finally {
+      generating = false;
+      digitsChanged();
+    }
+  }
+  app.post('/api/host/digits/generate', requirePin, express.json({ limit: '1kb' }), async (req, res) => {
+    const result = await runGenerate(!!(req.body && req.body.force));
+    res.status(result.error === 'espeak-ng is not installed' ? 409 : 200).json({ ...result, status: digitStatus(mediaDir) });
+  });
+
+  // My own spoken instruction for a VR condition (replaces the phone's text-to-speech).
+  app.put('/api/vr/voice/:cond/:lang', requirePin, audioUpload, (req, res) => {
+    const { cond, lang } = req.params;
+    const ext = String(req.query.ext || 'mp3');
+    if (!CONDITIONS.includes(cond) || !LANGS.includes(lang) || !AUDIO_EXTS.includes(ext)) {
+      return res.status(400).json({ error: 'Bad condition, language or file type' });
+    }
+    if (!req.body || !req.body.length) return res.status(400).json({ error: 'Empty file' });
+    const rel = path.join('vr', 'voice', cond);
+    fs.mkdirSync(path.join(mediaDir, rel), { recursive: true });
+    removeAudio(mediaDir, rel, lang);
+    fs.writeFileSync(path.join(mediaDir, rel, `${lang}.${ext}`), req.body);
+    res.json(voiceStatus(mediaDir, CONDITIONS));
+  });
+  app.delete('/api/vr/voice/:cond/:lang', requirePin, (req, res) => {
+    const { cond, lang } = req.params;
+    if (!CONDITIONS.includes(cond) || !LANGS.includes(lang)) return res.status(400).json({ error: 'Bad condition or language' });
+    removeAudio(mediaDir, path.join('vr', 'voice', cond), lang);
+    res.json(voiceStatus(mediaDir, CONDITIONS));
+  });
 
   app.get('/api/host/settings', requirePin, (req, res) => res.json(settings.get()));
   app.put('/api/host/settings', requirePin, express.json({ limit: '20kb' }), (req, res) => {
@@ -157,7 +207,10 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
       }
       socket.emit('settings', settings.publicView());
       socket.emit('status', status);
-      if (role === 'host') socket.emit('results', results.summary());
+      if (role === 'host') {
+        socket.emit('results', results.summary());
+        socket.emit('digitStatus', digitStatus(mediaDir));
+      }
       if (role === 'vr') socket.emit('vr:cal', { cal: settings.get().vrCal, testPattern });
       broadcastStatus();
 
@@ -171,7 +224,7 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
 
       socket.on('vr:status', (s) => {
         if (role !== 'vr' || !s || typeof s !== 'object') return;
-        const allowed = ['state', 'condition', 'camera', 'camRes', 'sensors', 'tilt', 'fps', 'ready', 'elapsed', 'duration'];
+        const allowed = ['state', 'condition', 'camera', 'camRes', 'sensors', 'sensorSource', 'tilt', 'yawRate', 'pitchRate', 'rollRate', 'motionPermission', 'voices', 'fullscreen', 'fps', 'ready', 'elapsed', 'duration'];
         for (const k of allowed) if (k in s) status.vr[k] = s[k];
         status.vr.at = Date.now();
         broadcastStatus();
@@ -182,12 +235,29 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
         const condition = msg && msg.condition;
         if (!CONDITIONS.includes(condition)) return;
         const s = settings.get();
+        const lang = LANGS.includes(msg.lang) ? msg.lang : 'en';
         io.to('vr').emit('vr:start', {
           condition,
-          lang: LANGS.includes(msg.lang) ? msg.lang : 'en',
+          lang,
           intensity: s.vr.intensity,
           duration: s.vr.durations[condition],
           vr: s.vr,
+          // my uploaded spoken instruction, or null -> the phone speaks the text with text-to-speech
+          voiceUrl: findAudio(mediaDir, path.join('vr', 'voice', condition), lang),
+        });
+      });
+
+      // Host page checks: play a Ménière's sound for a few seconds, or say a condition's instruction.
+      socket.on('vr:testSound', (msg) => {
+        if (role !== 'host' || !msg || !['tinnitus', 'muffled'].includes(msg.kind)) return;
+        io.to('vr').emit('vr:testSound', { kind: msg.kind });
+      });
+      socket.on('vr:say', (msg) => {
+        if (role !== 'host' || !msg || !CONDITIONS.includes(msg.condition) || !LANGS.includes(msg.lang)) return;
+        io.to('vr').emit('vr:say', {
+          condition: msg.condition,
+          lang: msg.lang,
+          voiceUrl: findAudio(mediaDir, path.join('vr', 'voice', msg.condition), msg.lang),
         });
       });
 
@@ -227,27 +297,7 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
     return io;
   }
 
-  return { app, attach, settings, results };
-}
-
-function digitManifest(mediaDir) {
-  const out = {};
-  for (const lang of LANGS) {
-    out[lang] = {};
-    const dir = path.join(mediaDir, 'ear', 'digits', lang);
-    for (let d = 0; d <= 9; d++) {
-      for (const ext of AUDIO_EXTS) {
-        const f = path.join(dir, `${d}.${ext}`);
-        if (fs.existsSync(f)) {
-          // ?v= changes when the file changes, so the browser never plays an old cached recording.
-          const v = Math.round(fs.statSync(f).mtimeMs);
-          out[lang][d] = `/media/ear/digits/${lang}/${d}.${ext}?v=${v}`;
-          break;
-        }
-      }
-    }
-  }
-  return out;
+  return { app, attach, settings, results, runGenerate };
 }
 
 module.exports = { createApp, digitManifest, LANGS };

@@ -5,7 +5,9 @@ const path = require('path');
 
 const CONDITIONS = ['bppv', 'neuritis', 'menieres', 'oscillopsia'];
 const INTENSITY_LEVELS = { low: 0.35, medium: 0.6, high: 0.85 };
-const MAX_CONDITION_SEC = 20;
+const MIN_CONDITION_SEC = 10;
+const MAX_CONDITION_SEC = 60;
+const SETTINGS_VERSION = 2; // version 2: 30 s conditions, separate tinnitus / muffled volumes
 
 // VR headset calibration (set live from the hidden panel on the tablet). [min, max, default]
 const CAL_LIMITS = {
@@ -42,13 +44,16 @@ const DEFAULTS = {
   testIdleTimeoutSec: 180, // safety net if a visitor walks away in the middle of a test (0 = never)
   vr: {
     intensity: 'low',
-    durations: { bppv: 18, neuritis: 20, menieres: 20, oscillopsia: 20 },
+    durations: { bppv: 30, neuritis: 30, menieres: 30, oscillopsia: 30 }, // 10–60 s, + / − on the host page
     rampSec: 3,
     bppvTiltDeg: 30,
     bppvLatencySec: 2.5,
     bppvWaitMaxSec: 30,
     invertTilt: false,
-    menieresVolume: 0.5, // 0..1, is multiplied by a hard safety cap on the phone
+    // Ménière's sounds, 0..1 of a hard safety maximum on the phone
+    tinnitusVolume: 0.3,
+    muffledVolume: 0.5,
+    oscillopsiaSensitivity: 1, // 0..3
   },
   vrCal: CAL_DEFAULTS,
 };
@@ -93,12 +98,14 @@ function sanitize(input, base = DEFAULTS) {
       bppvLatencySec: clampNum(v.bppvLatencySec, 0, 5, base.vr.bppvLatencySec),
       bppvWaitMaxSec: clampNum(v.bppvWaitMaxSec, 5, 120, base.vr.bppvWaitMaxSec),
       invertTilt: typeof v.invertTilt === 'boolean' ? v.invertTilt : base.vr.invertTilt,
-      menieresVolume: clampNum(v.menieresVolume, 0, 1, base.vr.menieresVolume),
+      tinnitusVolume: clampNum(v.tinnitusVolume, 0, 1, base.vr.tinnitusVolume),
+      muffledVolume: clampNum(v.muffledVolume, 0, 1, base.vr.muffledVolume),
+      oscillopsiaSensitivity: clampNum(v.oscillopsiaSensitivity, 0, 3, base.vr.oscillopsiaSensitivity),
     },
   };
   out.vrCal = sanitizeCal(s.vrCal, base.vrCal);
   for (const c of CONDITIONS) {
-    out.vr.durations[c] = clampNum(vd[c], 5, MAX_CONDITION_SEC, base.vr.durations[c]);
+    out.vr.durations[c] = Math.round(clampNum(vd[c], MIN_CONDITION_SEC, MAX_CONDITION_SEC, base.vr.durations[c]));
   }
   // The good limit must not be above the refer limit.
   if (out.bands.good > out.bands.refer) out.bands.good = out.bands.refer;
@@ -133,7 +140,13 @@ class SettingsStore {
     this.file = path.join(dataDir, 'settings.json');
     this.value = sanitize(DEFAULTS);
     try {
-      this.value = sanitize(JSON.parse(fs.readFileSync(this.file, 'utf8')));
+      const saved = JSON.parse(fs.readFileSync(this.file, 'utf8'));
+      // Older settings files: take the new default lengths (30 s) and sound levels.
+      if ((saved.version || 1) < SETTINGS_VERSION && saved.vr) {
+        delete saved.vr.durations;
+        delete saved.vr.menieresVolume;
+      }
+      this.value = sanitize(saved);
     } catch {
       /* first run – keep defaults */
     }
@@ -161,7 +174,7 @@ class SettingsStore {
   }
   save() {
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
-    fs.writeFileSync(this.file, JSON.stringify(this.value, null, 2));
+    fs.writeFileSync(this.file, JSON.stringify({ version: SETTINGS_VERSION, ...this.value }, null, 2));
   }
 }
 
@@ -171,4 +184,4 @@ function bandFor(srt, bands) {
   return 'refer';
 }
 
-module.exports = { SettingsStore, DEFAULTS, CAL_LIMITS, CAL_DEFAULTS, sanitizeCal, CONDITIONS, INTENSITY_LEVELS, MAX_CONDITION_SEC, sanitize, merge, bandFor };
+module.exports = { SettingsStore, DEFAULTS, CAL_LIMITS, CAL_DEFAULTS, sanitizeCal, CONDITIONS, INTENSITY_LEVELS, MIN_CONDITION_SEC, MAX_CONDITION_SEC, sanitize, merge, bandFor };

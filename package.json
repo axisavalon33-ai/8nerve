@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js --http",
-    "test": "node --test"
+    "test": "node --test --test-timeout=30000"
   },
   "repository": {
     "type": "git",

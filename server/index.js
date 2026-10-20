@@ -10,6 +10,7 @@ const QRCode = require('qrcode');
 const { createApp } = require('./app');
 const { loadOrCreateCert } = require('./certs');
 const { lanAddresses } = require('./network');
+const { digitStatus } = require('./media');
 
 const ROOT = path.join(__dirname, '..');
 const dataDir = process.env.EAR_DATA_DIR || path.join(ROOT, 'data');
@@ -50,10 +51,23 @@ async function printWelcome(protocol, port) {
   openBrowser(hostUrl);
 }
 
+// Make any missing placeholder digits (espeak-ng) in the background.
+async function makeMissingDigits(runGenerate) {
+  const status = digitStatus(mediaDir);
+  if (Object.values(status).every((s) => s.generatedCount === 10)) return;
+  const r = await runGenerate(false);
+  if (r.error === 'espeak-ng is not installed') {
+    console.log(' ! Placeholder digits not made: espeak-ng is not installed (see README, "Digit audio").\n');
+  } else if (r.made) {
+    console.log(` Made ${r.made} placeholder digit recordings with espeak-ng.${r.failed && r.failed.length ? ' Problems: ' + r.failed.join('; ') : ''}\n`);
+  }
+}
+
 async function main() {
   const protocol = httpOnly ? 'http' : 'https';
   const port = httpOnly ? httpPort : httpsPort;
-  const { app, attach } = createApp({ dataDir, mediaDir, links: { protocol, port } });
+  const { app, attach, runGenerate } = createApp({ dataDir, mediaDir, links: { protocol, port } });
+  makeMissingDigits(runGenerate).catch((e) => console.error(e));
 
   if (httpOnly) {
     const server = http.createServer(app);

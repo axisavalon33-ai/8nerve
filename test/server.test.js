@@ -66,9 +66,13 @@ test('settings are saved and kept within safe limits', async () => {
   const { body } = await json('/api/host/settings', {
     method: 'PUT',
     headers: { ...PIN, 'content-type': 'application/json' },
-    body: JSON.stringify({ vr: { durations: { menieres: 99 }, intensity: 'medium' }, bands: { good: -11 } }),
+    body: JSON.stringify({ vr: { durations: { menieres: 99, bppv: 3, neuritis: 45 }, intensity: 'medium', tinnitusVolume: 5 }, bands: { good: -11 } }),
   });
-  assert.equal(body.vr.durations.menieres, 20); // max 20 s
+  assert.equal(body.vr.durations.menieres, 60); // max 60 s
+  assert.equal(body.vr.durations.bppv, 10); // min 10 s
+  assert.equal(body.vr.durations.neuritis, 45);
+  assert.equal(body.vr.durations.oscillopsia, 30); // default 30 s
+  assert.equal(body.vr.tinnitusVolume, 1); // never above 100 %
   assert.equal(body.vr.intensity, 'medium');
   assert.equal(body.bands.good, -11);
   assert.equal(body.bands.refer, -7);
@@ -76,16 +80,75 @@ test('settings are saved and kept within safe limits', async () => {
   assert.equal(reset.body.vr.intensity, 'low');
 });
 
-test('digit upload (PIN) appears in the manifest; old formats are replaced', async () => {
-  const put = (ext, headers = PIN) => fetch(`${base}/api/ear/digits/si/7?ext=${ext}`, { method: 'PUT', headers, body: Buffer.from('RIFFtest') });
-  assert.equal((await put('wav', {})).status, 401);
-  assert.equal((await put('mp3')).status, 200);
-  assert.equal((await put('wav')).status, 200);
-  const files = fs.readdirSync(path.join(mediaDir, 'ear', 'digits', 'si'));
-  assert.deepEqual(files, ['7.wav']);
-  const { body } = await json('/api/ear/digits');
-  assert.match(body.si[7], /^\/media\/ear\/digits\/si\/7\.wav\?v=\d+$/);
-  assert.equal((await fetch(base + body.si[7])).status, 200);
+test('digit upload (PIN); a language uses one complete set – never mixed', async () => {
+  const put = (lang, d, ext, headers = PIN) => fetch(`${base}/api/ear/digits/${lang}/${d}?ext=${ext}`, { method: 'PUT', headers, body: Buffer.from('RIFFtest') });
+  assert.equal((await put('si', 7, 'wav', {})).status, 401);
+  assert.equal((await put('si', 7, 'mp3')).status, 200);
+  assert.equal((await put('si', 7, 'wav')).status, 200);
+  assert.deepEqual(fs.readdirSync(path.join(mediaDir, 'ear', 'digits', 'si')), ['7.wav']); // old format replaced
+
+  // Generated set for Tamil (as espeak-ng would make it)
+  const gdir = path.join(mediaDir, 'ear', 'digits-generated', 'ta');
+  fs.mkdirSync(gdir, { recursive: true });
+  for (let d = 0; d <= 9; d++) fs.writeFileSync(path.join(gdir, `${d}.wav`), 'RIFFgen');
+  for (const d of [1, 2, 3]) await put('ta', d, 'wav');
+
+  let st = (await json('/api/ear/digits/status')).body.status;
+  assert.equal(st.ta.recordedCount, 3);
+  assert.equal(st.ta.source, 'generated', '3/10 recorded -> generated set is used');
+  assert.equal(st.si.source, null, 'nothing complete for Sinhala');
+  let m = (await json('/api/ear/digits')).body;
+  assert.equal(Object.keys(m.ta).length, 10);
+  assert.ok(Object.values(m.ta).every((u) => u.includes('/digits-generated/ta/')), 'no mixing');
+  assert.deepEqual(m.si, {});
+
+  for (let d = 0; d <= 9; d++) await put('ta', d, 'wav');
+  m = (await json('/api/ear/digits')).body;
+  assert.ok(Object.values(m.ta).every((u) => u.includes('/ear/digits/ta/')), 'all 10 recorded -> my recordings');
+  assert.equal((await fetch(base + m.ta[4])).status, 200);
+
+  // Reset to generated
+  assert.equal((await fetch(`${base}/api/ear/digits/ta`, { method: 'DELETE' })).status, 401);
+  st = (await json('/api/ear/digits/ta', { method: 'DELETE', headers: PIN })).body.status;
+  assert.equal(st.ta.recordedCount, 0);
+  assert.equal(st.ta.source, 'generated');
+});
+
+test('spoken instruction MP3: upload, used at START, back to the phone voice', async () => {
+  assert.equal((await fetch(`${base}/api/vr/voice/bppv/ta?ext=mp3`, { method: 'PUT', body: 'ID3' })).status, 401);
+  let v = (await json('/api/vr/voice/bppv/ta?ext=mp3', { method: 'PUT', headers: PIN, body: 'ID3fake' })).body;
+  assert.match(v.bppv.ta, /^\/media\/vr\/voice\/bppv\/ta\.mp3\?v=/);
+  assert.equal(v.bppv.en, null);
+
+  const phone = ioClient(base, { auth: { role: 'vr' }, transports: ['websocket'] });
+  const tablet = ioClient(base, { auth: { role: 'tablet' }, transports: ['websocket'] });
+  try {
+    await Promise.all([phone, tablet].map((c) => new Promise((r) => c.on('connect', r))));
+    const got = new Promise((r) => phone.once('vr:start', r));
+    tablet.emit('vr:start', { condition: 'bppv', lang: 'ta' });
+    const msg = await got;
+    assert.equal(msg.voiceUrl, v.bppv.ta);
+    assert.equal(msg.duration, 30);
+    const got2 = new Promise((r) => phone.once('vr:start', r));
+    tablet.emit('vr:start', { condition: 'bppv', lang: 'en' });
+    assert.equal((await got2).voiceUrl, null, 'no MP3 -> phone text-to-speech');
+  } finally {
+    phone.close();
+    tablet.close();
+  }
+  v = (await json('/api/vr/voice/bppv/ta', { method: 'DELETE', headers: PIN })).body;
+  assert.equal(v.bppv.ta, null);
+});
+
+test('old settings files get the new 30 s lengths', () => {
+  const { SettingsStore } = require('../server/settings');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ear-old-'));
+  fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ pin: '1111', vr: { durations: { bppv: 18, neuritis: 20 }, menieresVolume: 0.9 } }));
+  const s = new SettingsStore(dir).get();
+  assert.equal(s.pin, '1111');
+  assert.equal(s.vr.durations.bppv, 30);
+  assert.equal(s.vr.tinnitusVolume, 0.3);
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('STOP on the tablet reaches the VR phone; START carries the settings', async () => {
@@ -104,7 +167,7 @@ test('STOP on the tablet reaches the VR phone; START carries the settings', asyn
   assert.equal(s.condition, 'bppv');
   assert.equal(s.lang, 'ta');
   assert.equal(s.intensity, 'low');
-  assert.ok(s.duration <= 20);
+  assert.equal(s.duration, 30);
 
   const statusSeen = new Promise((r) => host.on('status', (st) => st.vr.state === 'running' && r(st)));
   phone.emit('vr:status', { state: 'running', ready: true, tilt: 12 });
@@ -180,4 +243,25 @@ test('real Wi-Fi addresses are preferred over virtual adapters', () => {
   assert.ok(score('192.168.1.20', 'Wi-Fi') > score('172.24.48.1', 'vEthernet (WSL)'));
   assert.ok(score('192.168.0.5', 'wlan0') > score('192.168.56.1', 'VirtualBox Host-Only Network'));
   assert.ok(score('10.0.0.8', 'Ethernet') > score('10.8.0.2', 'OpenVPN TAP'));
+});
+
+test('placeholder digits made with espeak-ng are trimmed and normalised', { skip: !require('child_process').spawnSync('espeak-ng', ['--version']).stdout?.length && 'espeak-ng not installed' }, async () => {
+  const { generateDigits, readWav } = require('../server/digit-tts');
+  const DSP = require('../public/ear/js/dsp.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ear-gen-'));
+  try {
+    const r = await generateDigits(dir, { langs: ['en', 'ta', 'si'] });
+    assert.equal(r.made, 30, JSON.stringify(r.failed));
+    for (const lang of ['en', 'ta', 'si']) {
+      for (let d = 0; d <= 9; d++) {
+        const { data, sampleRate } = readWav(fs.readFileSync(path.join(dir, 'ear', 'digits-generated', lang, `${d}.wav`)));
+        assert.ok(data.length / sampleRate > 0.15 && data.length / sampleRate < 1.6, `${lang}/${d} length`);
+        assert.ok(Math.abs(DSP.activeRms(data, sampleRate) - 0.1) < 0.02, `${lang}/${d} loudness`);
+      }
+    }
+    const again = await generateDigits(dir);
+    assert.equal(again.made, 0, 'existing files are kept');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

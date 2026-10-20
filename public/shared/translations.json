@@ -237,6 +237,36 @@
     "needsReview": true
   },
 
+  "vr.bppv.say": {
+    "en": "Turn your head slowly towards your right shoulder, and wait.",
+    "ta": "உங்கள் தலையை மெதுவாக வலது தோள் பக்கம் சாய்த்து, காத்திருங்கள்.",
+    "si": "ඔබේ හිස සෙමින් දකුණු උරහිස දෙසට ඇල කර, රැඳී සිටින්න.",
+    "needsReview": true
+  },
+  "vr.neuritis.say": {
+    "en": "Keep your head still and look straight ahead.",
+    "ta": "தலையை அசைக்காமல் நேராகப் பாருங்கள்.",
+    "si": "හිස නොසොලවා කෙළින්ම ඉදිරිය බලන්න.",
+    "needsReview": true
+  },
+  "vr.menieres.say": {
+    "en": "Keep your head still, and listen.",
+    "ta": "தலையை அசைக்காமல், கவனமாகக் கேளுங்கள்.",
+    "si": "හිස නොසොලවා, සවන් දෙන්න.",
+    "needsReview": true
+  },
+  "vr.oscillopsia.say": {
+    "en": "Move your head gently from side to side.",
+    "ta": "உங்கள் தலையை மெதுவாக இடமும் வலமும் அசையுங்கள்.",
+    "si": "ඔබේ හිස සෙමින් දෙපසට සොලවන්න.",
+    "needsReview": true
+  },
+  "fullscreen.return": {
+    "en": "Tap to return to fullscreen",
+    "ta": "முழுத்திரைக்குத் திரும்ப அழுத்துங்கள்",
+    "si": "සම්පූර්ණ තිරයට යාමට ඔබන්න",
+    "needsReview": true
+  },
   "vr.start": { "en": "START", "ta": "START", "si": "START" },
   "vr.stop": { "en": "STOP", "ta": "STOP", "si": "STOP" },
   "vr.phoneMissing": {

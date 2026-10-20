@@ -44,6 +44,7 @@
     state.lang = lang;
     I18n.lang = lang;
     I18n.apply();
+    Kiosk.update();
     if (state.vrCondition) fillVrTexts();
     socket.emit('tablet:status', { screen: state.screen, lang });
   }
@@ -446,6 +447,8 @@
 
   async function init() {
     await I18n.load();
+    // Fullscreen + screen awake from the first tap (the language choice).
+    Kiosk.init({ label: () => I18n.t('fullscreen.return') });
     const [cfg, manifest] = await Promise.all([fetch('/api/config').then((r) => r.json()), fetch('/api/ear/digits').then((r) => r.json())]);
     state.config = state.config || cfg;
     state.manifest = manifest;

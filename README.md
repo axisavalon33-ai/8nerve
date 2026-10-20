@@ -30,9 +30,16 @@ only need to be on the same Wi-Fi (a pocket router or the laptop's own hotspot i
    ```
    npm install
    ```
-   This downloads the libraries the station needs (Express, Socket.IO, selfsigned, Three.js). They are stored in the
+   This downloads the libraries the station needs (Express, Socket.IO, selfsigned, Three.js, qrcode). They are stored in the
    `node_modules` folder on the laptop. The fonts (Noto Sans, Noto Sans Tamil,
    Noto Sans Sinhala) are already inside the project in `public/fonts/`, so nothing is loaded from the internet later.
+
+5. **Install espeak-ng** (free, offline text-to-speech – makes placeholder digit recordings in English, Tamil and Sinhala):
+   - **Windows:** open <https://github.com/espeak-ng/espeak-ng/releases>, download **`espeak-ng.msi`** (the newest
+     release, under *Assets*), double-click it and accept the defaults.
+   - **Mac:** `brew install espeak-ng`  ·  **Linux:** `sudo apt install espeak-ng`
+   - The next `npm start` makes the 30 placeholder digits by itself (it says *"Made 30 placeholder digit recordings"*).
+     If espeak-ng is installed somewhere unusual: `set ESPEAK_PATH=C:\path\to\espeak-ng.exe` before `npm start`.
 
 ## 2. Copy the media files
 
@@ -40,10 +47,21 @@ Media files are **not** on GitHub. Put them here (see `media/ear/README.md`):
 
 ```
 media/ear/home.mp4          looping background video
-media/ear/digits/en/0..9    digit recordings (make them with /ear/record, step 6)
+media/ear/digits/en/0..9    MY digit recordings (made with /ear/record or uploaded on the host page)
 media/ear/digits/ta/0..9
 media/ear/digits/si/0..9
+media/ear/digits-generated/  placeholder digits – made automatically with espeak-ng
+media/vr/voice/<condition>/<lang>.mp3   my spoken VR instructions (uploaded on the host page)
 ```
+
+## Fullscreen and "Add to Home screen"
+
+- The tablet (`/ear`) and the phone (`/vr`) go **fullscreen on the first tap** (language button / *Tap to start VR*) and keep the
+  screen awake; the phone also locks to landscape. If fullscreen is left (e.g. by a swipe), a small
+  **"Tap to return to fullscreen"** button appears at the top left.
+- Both pages have a web-app manifest (`display: fullscreen`). In Chrome: ⋮ → **Add to Home screen**. Note: with the station's
+  self-signed certificate Chrome may add a plain shortcut that still opens with the browser bar – the first-tap fullscreen then
+  takes over.
 
 ## 3. Start the server
 
@@ -125,7 +143,18 @@ Tips for the exhibition:
 | Divider width | 0–0.06 | 0.006 |
 | Picture size in screen mode (the text panels shown inside the headset) | 0.8–2.2 | 1.6 |
 
-## 6. Record the digits (once per language)
+## 6. Digit audio: generated placeholders and my recordings
+
+Each language always uses **one complete set** of 10 digits, never a mix:
+- **My recordings** – used only when **all 10** digits of that language are recorded (or uploaded);
+- otherwise the **generated** set (espeak-ng computer voice, made automatically).
+
+Both are trimmed and loudness-normalised the same way, so test levels stay consistent. The host page section
+**Digit audio** shows every digit with **▶ Play**, its source (*Generated* / *My recording*), **Replace with recording**
+(opens the recording helper at that digit), **Upload MP3**, and **Reset to generated** per language. A warning appears when a
+language is incomplete.
+
+To record on the tablet:
 
 1. On the tablet open `https://<laptop-ip>:8443/ear/record`, enter the PIN (default **2468**).
 2. Choose the language, allow the microphone.
@@ -144,9 +173,18 @@ Open `https://<laptop-ip>:8443/ear/host` (on the laptop or your own phone). Defa
 - **STOP VR:** the same as the red STOP on the tablet.
 - **Results:** counts (total, today, by band, by language) and the last 30 results **with the SRT in dB** (visitors never see dB).
   *Download CSV* for your own analysis, *Reset results* to empty the list.
-- **Settings:** result bands, idle timeout (default 60 s → HOME), VR intensity (default **Low**), length of each condition
-  (max 20 s), ramp-up (default 3 s), BPPV tilt angle / delay, Ménière's sound volume, test details, PIN.
-  *Restore defaults* resets everything except the PIN.
+- **VR experience – live controls** (saved at once, used from the next START):
+  - **Length** of each condition with **− / +** (5 s steps, 10–60 s, default **30 s**);
+  - **Tinnitus / ringing** volume (default 30 %) and **Muffled hearing + fullness** volume, each with **▶ Test sound**
+    (3 s on the phone's earphones). Both are made in code, fade in gently and can never go above a safe maximum;
+  - **Oscillopsia sensitivity** (how strongly the picture follows head movement, ×0–×3).
+- **Head movement:** live values from the phone's motion sensors (tilt, turn, nod, roll) and a clear warning if there are none.
+- **Spoken instructions (VR):** for each condition and language – the text, **▶ On phone** (to hear it), **Upload MP3** to use
+  your own recording, **Use phone voice** to go back. Without an MP3 the phone's text-to-speech reads the text (placeholder);
+  if the phone has no voice for Tamil or Sinhala it stays silent – upload an MP3 for that language.
+- **Digit audio:** see step 6.
+- **Settings:** result bands, idle timeout (default 60 s → HOME), VR intensity (default **Low**), ramp-up (default 3 s),
+  BPPV tilt angle / delay, test details, PIN. *Restore defaults* resets everything except the PIN and the headset calibration.
 
 Saved data lives in the `data/` folder on the laptop (not on GitHub):
 `data/ear_results.json` (time, language, SRT, band – **no names**), `data/settings.json`, `data/certs/`.
@@ -174,18 +212,19 @@ The phone draws everything with one Three.js shader (`public/vr/renderer.js`): t
 picture, up to 1920×1080 at 30 fps, continuous focus/exposure/white balance, zoom 1.0) is shown in two lens-shaped eyes with
 Cardboard-style barrel distortion, at the phone's full screen resolution and with unchanged colours. The effects are applied
 in the same lens space, so they are distorted correctly. **No flashing, strobing or brightness changes** anywhere; text
-inside the headset fades in slowly. Every condition is limited to **20 s**, starts with a **3 s gentle ramp**, and the global
-intensity is **Low** by default (Low 0.35 / Medium 0.6 / High 0.85 of the maximum). Hard limits: rotation ±15°, shift 15 % of the
-view, Ménière's sound capped at 25 % of full volume.
+inside the headset fades in slowly. Each condition lasts **30 s** by default (10–60 s on the host page), starts with a
+**3 s gentle ramp** and fades out at the end; the global intensity is **Low** by default (Low 0.35 / Medium 0.6 / High 0.85 of the
+maximum). Hard limits: rotation ±15°, shift 15 % of the view, ringing tone ≈ −26 dBFS and muffled sound at most 30 % (then a
+compressor and a master limit). At the start the phone says a short instruction in the visitor's language.
 
 | Condition | What the visitor sees / hears |
 |---|---|
-| **BPPV (right ear)** | Nothing until the head tilts **right** > 30°. Tilting left does nothing. After 2.5 s: torsional rotation + up-beating nystagmus that builds up, peaks and fades over the set length (default 18 s). If no tilt comes within 30 s, it ends by itself. |
+| **BPPV (right ear)** | Nothing until the head tilts **right** > 30°. Tilting left does nothing. After 2.5 s: torsional rotation + up-beating nystagmus that builds up, peaks and fades over the set length (default 30 s). If no tilt comes within 30 s, it ends by itself. |
 | **Vestibular neuritis** | Steady horizontal nystagmus: slow drift (0.4 s) then fast snap back (0.08 s) with slight motion blur, about 2 beats per second. |
-| **Ménière's disease** | Spinning episode (faster nystagmus + slow swaying rotation) and, in the earphones, a muffled low roar plus a soft ringing tone. |
-| **Oscillopsia** | The picture only moves when the head moves: it is shifted in proportion to head rotation speed and bounces back. Still head = still picture. |
+| **Ménière's disease** | Spinning episode (faster nystagmus + slow swaying rotation) and, in the earphones, ringing (tinnitus), muffled "through a wall" sound and a deep pressure rumble (fullness). |
+| **Oscillopsia** | The picture only moves when the head moves: each turn/nod throws the picture along with it and it bounces back (spring). Still head = still picture. Uses the gyroscope; phones without one use the orientation sensor instead. |
 
-**STOP** (tablet or host) sets the phone **instantly** to the plain, still camera view, switches the sound off and shows
+**STOP** (tablet or host) sets the phone **instantly** to the plain, still camera view, switches the sound and voice off and shows
 "Take the headset off slowly". After each condition the tablet shows "Take the headset off slowly" and a short explanation
 (what happens in the inner ear, when to see a doctor).
 
@@ -200,11 +239,13 @@ when the phone is held sideways in a VR box.
 ```
 npm test
 ```
-32 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
+36 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
 the noise generator, silence trimming/normalising, the WAV file, the nystagmus timing, BPPV (right tilt only, delay, build-up and
 fade, ends by itself), the 20 s limit and ramp, oscillopsia (still head = still picture), the head-tilt maths, the server API, the
 PIN protection, anonymous result saving, settings limits, digit upload, STOP from tablet → phone, headset calibration (limits,
-saving, live to the phone), that Three.js is served locally, the QR-code addresses, and that every translation key
+saving, live to the phone), that Three.js is served locally, the QR-code addresses, the 10–60 s lengths, the
+oscillopsia bounce, digit sets never being mixed, espeak-ng placeholder digits (trimmed and normalised), spoken-instruction
+uploads, and that every translation key
 exists in EN/TA/SI with your exact texts.
 
 ### Quick test on the laptop only

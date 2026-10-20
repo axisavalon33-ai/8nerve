@@ -7,6 +7,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   const MAX_ROLL_DEG = 15; // torsional tilt limit at full intensity
   const MAX_SHIFT = 0.15; // never move the picture more than 15 % of the view
+  const MAX_DURATION = 60; // seconds
 
   const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
   const smoothstep = (x) => {
@@ -36,10 +37,11 @@
   }
 
   class Episode {
-    // opts: { condition, intensity (0..1), duration (s), rampSec, bppvTiltDeg, bppvLatencySec, bppvWaitMaxSec }
+    // opts: { condition, intensity (0..1), duration (s), rampSec, bppvTiltDeg, bppvLatencySec, bppvWaitMaxSec, sensitivity }
     constructor(opts, now) {
-      this.o = Object.assign({ rampSec: 3, bppvTiltDeg: 30, bppvLatencySec: 2.5, bppvWaitMaxSec: 30 }, opts);
-      this.o.duration = clamp(this.o.duration || 20, 1, 20); // never longer than 20 s
+      this.o = Object.assign({ rampSec: 3, bppvTiltDeg: 30, bppvLatencySec: 2.5, bppvWaitMaxSec: 30, sensitivity: 1 }, opts);
+      this.o.duration = clamp(this.o.duration || 30, 1, MAX_DURATION);
+      this.o.sensitivity = clamp(Number(this.o.sensitivity) || 0, 0, 3);
       this.o.intensity = clamp(this.o.intensity, 0, 1);
       this.start = now;
       this.phase = this.o.condition === 'bppv' ? 'waiting' : 'running';
@@ -56,7 +58,7 @@
       return { elapsed: 0, duration: this.o.duration };
     }
 
-    // sensors: { tilt (deg, + = head tilted right), yawRate, pitchRate (deg/s) }
+    // sensors: { tilt (deg, + = head tilted right), yawRate, pitchRate, rollRate (deg/s) }
     update(now, sensors = {}) {
       const o = this.o;
       const I = o.intensity;
@@ -117,20 +119,25 @@
           break;
         }
         case 'oscillopsia': {
-          // Picture shifts in proportion to head movement and bounces back (spring). Head still = still picture.
+          // The eyes no longer stay steady when the head moves: the picture is thrown along with each
+          // head movement and bounces back (under-damped spring). Head still = still picture.
           const env = rampEnvelope(t, o.duration, o.rampSec);
-          const k = 0.0016 * I * env;
-          const tx = clamp(-(sensors.yawRate || 0) * k, -MAX_SHIFT, MAX_SHIFT);
-          const ty = clamp(-(sensors.pitchRate || 0) * k, -MAX_SHIFT, MAX_SHIFT);
+          const gain = 0.0025 * o.sensitivity * (0.4 + I) * env; // view fraction per deg/s
+          const tx = clamp((sensors.yawRate || 0) * gain, -MAX_SHIFT, MAX_SHIFT);
+          const ty = clamp(-(sensors.pitchRate || 0) * gain, -MAX_SHIFT, MAX_SHIFT);
+          const tr = clamp((sensors.rollRate || 0) * gain * 40, -8, 8);
           const s = this.spring;
-          const stiff = 140;
-          const damp = 9;
+          const stiff = 90;
+          const damp = 5;
           s.vx += (stiff * (tx - s.x) - damp * s.vx) * dt;
           s.vy += (stiff * (ty - s.y) - damp * s.vy) * dt;
+          s.vr = (s.vr || 0) + (stiff * (tr - (s.r || 0)) - damp * (s.vr || 0)) * dt;
           s.x += s.vx * dt;
           s.y += s.vy * dt;
+          s.r = (s.r || 0) + s.vr * dt;
           out.dx = s.x;
           out.dy = s.y;
+          out.roll = s.r;
           break;
         }
       }
@@ -156,14 +163,38 @@
     return (Math.atan2(-sx, sy) * 180) / Math.PI;
   }
 
-  // Rotation rates (deg/s) about the screen axes: yaw = turning left/right, pitch = nodding.
-  function headRates(beta, gamma, screenAngle) {
+  // Rotation rates (deg/s) about the screen axes: yaw = turning left/right, pitch = nodding,
+  // roll = tilting towards a shoulder. beta/gamma/alpha = rotationRate about the device x/y/z axes.
+  function headRates(beta, gamma, screenAngle, alpha = 0) {
     const a = (screenAngle * Math.PI) / 180;
     return {
       pitchRate: beta * Math.cos(a) - gamma * Math.sin(a),
       yawRate: beta * Math.sin(a) + gamma * Math.cos(a),
+      rollRate: alpha || 0,
     };
   }
 
-  return { Episode, nystagmus, bppvEnvelope, rampEnvelope, smoothstep, headRoll, headRates, MAX_ROLL_DEG, MAX_SHIFT };
+  // Fallback for phones without a gyroscope: turn rates from successive deviceorientation readings.
+  // Returns a function (event, timeMs) -> { yawRate, pitchRate, rollRate } or null for the first reading.
+  function orientationRateTracker() {
+    let last = null;
+    const diff = (a, b) => ((((a - b) % 360) + 540) % 360) - 180; // shortest angle difference
+    return (e, now, screenAngle) => {
+      if (e.alpha === null || e.beta === null) return null;
+      const cur = { a: e.alpha, b: e.beta, g: e.gamma || 0, t: now };
+      const prev = last;
+      last = cur;
+      if (!prev) return null;
+      const dt = (cur.t - prev.t) / 1000;
+      if (dt <= 0 || dt > 0.5) return null;
+      // In landscape the compass angle (alpha) changes when turning the head left/right.
+      const yaw = diff(cur.a, prev.a) / dt;
+      const tiltA = diff(cur.b, prev.b) / dt;
+      const tiltG = diff(cur.g, prev.g) / dt;
+      const landscape = Math.abs(Math.round(screenAngle / 90)) % 2 === 1;
+      return { yawRate: yaw, pitchRate: landscape ? tiltG : tiltA, rollRate: landscape ? tiltA : tiltG };
+    };
+  }
+
+  return { Episode, nystagmus, bppvEnvelope, rampEnvelope, smoothstep, headRoll, headRates, orientationRateTracker, MAX_ROLL_DEG, MAX_SHIFT, MAX_DURATION };
 });

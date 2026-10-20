@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#000000" />
+    <link rel="manifest" href="/manifest-vr.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <title>Ear &amp; Balance – VR</title>
     <link rel="stylesheet" href="/shared/fonts.css" />
     <style>
@@ -81,6 +84,13 @@
         color: rgba(255, 255, 255, 0.4);
         font-size: 14px;
       }
+      .warn {
+        padding: 10px 16px;
+        border-radius: 14px;
+        background: rgba(245, 158, 11, 0.95);
+        color: #12233d;
+        font-weight: 700;
+      }
       .hidden {
         display: none !important;
       }
@@ -96,6 +106,9 @@
       <p>1. Turn the phone sideways (landscape). 2. Tap the button. 3. Allow camera and motion sensors. 4. Put the phone in the VR box. The tablet controls everything after that.</p>
       <button id="startBtn" type="button">Tap to start VR</button>
       <div id="setupStatus">Connecting…</div>
+      <p id="sensorWarn" class="warn hidden">
+        ⚠ No motion sensor data. In Chrome: ⋮ → Settings → Site settings → Motion sensors → Allow, then reload this page.
+      </p>
     </div>
     <!-- Small helper button (top middle, on the divider line): back to the setup screen -->
     <button id="exitBtn" class="hidden" type="button" aria-label="setup">⋯</button>
@@ -105,6 +118,7 @@
     </script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/shared/i18n.js"></script>
+    <script src="/shared/kiosk.js"></script>
     <script src="/vr/effects.js"></script>
     <script type="module" src="/vr/vr.js"></script>
   </body>

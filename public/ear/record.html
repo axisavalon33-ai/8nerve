@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ear &amp; Balance – Record digits</title>
+    <link rel="manifest" href="/manifest-ear.webmanifest" />
+    <meta name="theme-color" content="#0f9b8e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="stylesheet" href="/shared/fonts.css" />
     <link rel="stylesheet" href="/shared/style.css" />
     <link rel="stylesheet" href="/ear/staff.css" />
@@ -24,7 +29,9 @@
         <p class="small-note">
           Use a quiet room. Hold the tablet about 20 cm from the mouth. Tap <b>Record</b>, say the number once, clearly and calmly, at a normal
           loudness. Recording stops by itself after 3 seconds (or tap <b>Stop</b>). Silence is cut off and the loudness is evened out automatically.
-          Listen with <b>Play</b>, then tap <b>Save</b>. Use the same speaker for all ten digits of a language.
+          Listen with <b>Play</b>, then tap <b>Save</b>. Use the same speaker for all ten digits of a language.<br />
+          <b>Your recordings are used only when all 10 digits of a language are recorded</b> – until then the generated
+          (computer voice) digits are used, so one test never mixes two voices.
         </p>
         <div class="lang-pick">
           <button class="btn" data-lang="en" type="button">English</button>
@@ -43,6 +50,7 @@
       </div>
     </div>
 
+    <script src="/shared/kiosk.js"></script>
     <script src="/ear/staff.js"></script>
     <script src="/ear/js/dsp.js"></script>
     <script src="/ear/js/record.js"></script>
