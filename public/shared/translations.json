@@ -267,6 +267,12 @@
     "si": "සම්පූර්ණ තිරයට යාමට ඔබන්න",
     "needsReview": true
   },
+  "vr.strength": {
+    "en": "Effect strength",
+    "ta": "விளைவின் வலிமை",
+    "si": "බලපෑමේ ප්‍රබලතාව",
+    "needsReview": true
+  },
   "vr.start": { "en": "START", "ta": "START", "si": "START" },
   "vr.stop": { "en": "STOP", "ta": "STOP", "si": "STOP" },
   "vr.phoneMissing": {

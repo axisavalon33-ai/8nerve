@@ -240,15 +240,23 @@
   }
 
   async function finishTest(srt) {
-    const band = DIN.bandFor(srt, state.config.bands);
-    showResult(band, DIN.gaugePosition(srt, state.config.bands));
+    const bands = DIN.bandsFor(state.config.bands, state.lang);
+    const band = DIN.bandFor(srt, bands);
+    $('#calibNote').classList.add('hidden');
+    showResult(band, DIN.gaugePosition(srt, bands));
     try {
       // Saved anonymously: time, language, SRT and band only.
-      await fetch('/api/ear/results', {
+      const res = await fetch('/api/ear/results', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ lang: state.lang, srt }),
       });
+      const saved = await res.json();
+      // Calibration mode (staff only): show the measured value so the tester can note it.
+      if (saved.calib) {
+        $('#calibNote').textContent = `Calibration test (normal listener) – SRT ${srt.toFixed(1)} dB`;
+        $('#calibNote').classList.remove('hidden');
+      }
     } catch (err) {
       console.warn('Could not save result', err);
     }
@@ -297,6 +305,17 @@
     $('#vrRunHint').textContent = hint ? I18n.t(hint) : '';
     $('#vrWhat').textContent = I18n.t(`vr.${c}.what`);
     $('#vrDoctor').textContent = I18n.t(`vr.${c}.doctor`);
+    showStrength();
+  }
+
+  // Effect strength (set on the host page), shown on the VR screens for the helper.
+  function showStrength() {
+    const v = state.config && state.config.vr ? state.config.vr.intensity : null;
+    const pct = typeof v === 'number' ? Math.round(v * 100) : null;
+    document.querySelectorAll('.strength').forEach((el) => {
+      el.textContent = pct === null ? '' : `${I18n.t('vr.strength')}: ${pct}%`;
+      el.style.setProperty('--pct', (pct || 0) + '%');
+    });
   }
 
   function phoneReady() {
@@ -356,7 +375,10 @@
   }
 
   // ---------------- socket ----------------
-  socket.on('settings', (cfg) => (state.config = cfg));
+  socket.on('settings', (cfg) => {
+    state.config = cfg;
+    showStrength();
+  });
   socket.on('vr:cal', (msg) => state.config && (state.config.vrCal = msg.cal));
   socket.on('digits', (m) => (state.manifest = m));
   socket.on('status', (s) => {

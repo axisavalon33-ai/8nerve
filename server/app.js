@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const express = require('express');
 const QRCode = require('qrcode');
 const { Server } = require('socket.io');
-const { SettingsStore, CONDITIONS, CAL_DEFAULTS, bandFor } = require('./settings');
+const { SettingsStore, CONDITIONS, CAL_DEFAULTS, bandFor, bandsFor } = require('./settings');
 const { ResultsStore } = require('./results');
 const { lanAddresses } = require('./network');
 const { LANGS, AUDIO_EXTS, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus } = require('./media');
@@ -56,9 +56,12 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
       return res.status(400).json({ error: 'Bad result' });
     }
     const value = Math.round(n * 10) / 10;
-    const entry = results.add({ time: new Date().toISOString(), lang, srt: value, band: bandFor(value, settings.get().bands) });
+    const s = settings.get();
+    const entry = { time: new Date().toISOString(), lang, srt: value, band: bandFor(value, bandsFor(s.bands, lang)) };
+    if (s.calibrationMode) entry.calib = true;
+    results.add(entry);
     io.to('host').emit('results', results.summary());
-    res.json({ band: entry.band });
+    res.json({ band: entry.band, calib: !!entry.calib });
   });
 
   app.post('/api/pin', express.json({ limit: '1kb' }), (req, res) => {
@@ -168,6 +171,18 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
     // Opened as a normal link, so the PIN comes in the query string.
     if (!pinMatches(req.query.pin, settings.get().pin)) return res.status(401).send('Wrong PIN');
     res.type('text/csv').attachment('ear_results.csv').send(results.csv());
+  });
+  // Mark / unmark a result as a normal-listener (calibration) test.
+  app.patch('/api/host/results/:id', requirePin, express.json({ limit: '1kb' }), (req, res) => {
+    const r = results.setCalib(req.params.id, !!(req.body && req.body.calib));
+    if (!r) return res.status(404).json({ error: 'Result not found' });
+    io.to('host').emit('results', results.summary());
+    res.json(results.summary());
+  });
+  app.delete('/api/host/results/calibration', requirePin, (req, res) => {
+    results.clearCalibration();
+    io.to('host').emit('results', results.summary());
+    res.json(results.summary());
   });
   app.delete('/api/host/results', requirePin, (req, res) => {
     results.clear();

@@ -107,7 +107,32 @@
   }
 
   let live = null; // last public settings
+  function strengthName(v) {
+    const pct = Math.round((v || 0) * 100);
+    const name = v <= 0.4 ? 'Low' : v <= 0.7 ? 'Medium' : 'High';
+    return `${pct}% (${name})`;
+  }
+
   function setupLive() {
+    $('#vrStrength').addEventListener('input', () => {
+      const v = Number($('#vrStrength').value) / 100;
+      $('#vrStrengthOut').textContent = Math.round(v * 100) + '%';
+      $('#vrStrengthStatus').textContent = strengthName(v);
+      saveLive({ vr: { intensity: v } });
+    });
+    document.querySelectorAll('[data-strength]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const v = Number(b.dataset.strength);
+        $('#vrStrength').value = Math.round(v * 100);
+        $('#vrStrengthOut').textContent = Math.round(v * 100) + '%';
+        saveLive({ vr: { intensity: v } });
+      }),
+    );
+    $('#calibMode').addEventListener('change', () => saveLive({ calibrationMode: $('#calibMode').checked }));
+    $('#calibClear').addEventListener('click', async () => {
+      if (!confirm('Unmark all normal-listener results? (The results stay, they just count as visitors again.)')) return;
+      renderResults(await Staff.api('/api/host/results/calibration', { method: 'DELETE' }));
+    });
     const wrap = $('#durations');
     for (const c of CONDS) {
       const row = el('div', 'dur');
@@ -147,6 +172,14 @@
   }
   function renderLive(pub) {
     live = JSON.parse(JSON.stringify(pub));
+    currentBands = pub.bands;
+    renderCalibration();
+    $('#calibMode').checked = !!pub.calibrationMode;
+    $('#calibModeWarn').classList.toggle('hidden', !pub.calibrationMode);
+    const pct = Math.round((pub.vr.intensity || 0.35) * 100);
+    if (document.activeElement !== $('#vrStrength')) $('#vrStrength').value = pct;
+    $('#vrStrengthOut').textContent = pct + '%';
+    $('#vrStrengthStatus').textContent = strengthName(pub.vr.intensity);
     for (const c of CONDS) {
       const v = pub.vr.durations[c];
       $('#dur-' + c).textContent = v + ' s';
@@ -432,7 +465,69 @@
         if (i === 3) td.className = 'band-' + item.band;
         tr.appendChild(td);
       });
+      const td = document.createElement('td');
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = !!item.calib;
+      box.title = 'Normal listener (used for calibration, not counted as a visitor)';
+      box.addEventListener('change', async () => {
+        try {
+          renderResults(await Staff.api('/api/host/results/' + item.id, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ calib: box.checked }) }));
+        } catch (e) {
+          alert('Could not save: ' + e.message);
+        }
+      });
+      td.appendChild(box);
+      tr.appendChild(td);
       tbody.appendChild(tr);
+    }
+    lastResults = r;
+    renderCalibration();
+  }
+
+  // ---------- calibrate with normal listeners ----------
+  let lastResults = null;
+  let currentBands = null; // settings.bands (from the public settings)
+  function renderCalibration() {
+    if (!lastResults || !currentBands) return;
+    const wrap = $('#calibLangs');
+    wrap.innerHTML = '';
+    for (const lang of LANGS) {
+      const c = lastResults.calibration[lang];
+      const box = el('div', 'calib-lang');
+      box.append(el('h3', '', LANG_NAMES[lang]));
+      if (!c.n) {
+        box.append(el('p', 'small-note', 'No normal-listener results yet.'));
+      } else {
+        box.append(el('p', '', `${c.n} normal listener${c.n > 1 ? 's' : ''} · average ${c.mean.toFixed(1)} dB · SD ${c.sd.toFixed(1)} dB · range ${c.min} to ${c.max} dB`));
+        const vals = el('div', 'vals');
+        c.values.forEach((v) => vals.append(el('span', '', v.toFixed(1))));
+        box.append(vals);
+      }
+      const own = currentBands.perLang && currentBands.perLang[lang];
+      const now = own || { good: currentBands.good, refer: currentBands.refer };
+      box.append(el('p', 'current', `Now used: GOOD ≤ ${now.good} dB, REFER > ${now.refer} dB (${own ? 'own bands for ' + LANG_NAMES[lang] : 'common bands'})`));
+      if (c.suggested) {
+        box.append(el('p', 'suggest', `Suggested: GOOD ≤ ${c.suggested.good} dB, REFER > ${c.suggested.refer} dB`));
+        if (c.n < 10) box.append(el('p', 'small-note', `Only ${c.n} people – 10 or more give a more reliable suggestion.`));
+        box.append(
+          button('✓ Use for ' + LANG_NAMES[lang], () => applyBands({ perLang: { [lang]: c.suggested } }), 'mini'),
+          button('✓ Use for all languages', () => applyBands({ good: c.suggested.good, refer: c.suggested.refer, perLang: { en: null, ta: null, si: null } }), 'mini'),
+        );
+      } else if (c.n) {
+        box.append(el('p', 'small-note', `At least 5 normal listeners are needed for a suggestion (${c.n} so far).`));
+      }
+      if (own) box.append(button('↺ Use common bands', () => applyBands({ perLang: { [lang]: null } }), 'mini danger'));
+      wrap.append(box);
+    }
+  }
+  async function applyBands(patch) {
+    try {
+      const saved = await Staff.api('/api/host/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ bands: patch }) });
+      fillForm(saved);
+      flashSaved();
+    } catch (e) {
+      alert('Could not save: ' + e.message);
     }
   }
 

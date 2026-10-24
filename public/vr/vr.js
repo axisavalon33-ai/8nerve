@@ -188,8 +188,11 @@ function vol() {
 socket.on('settings', (s) => {
   st.settings = s;
   if (!st.cal && s.vrCal) applyCal(s.vrCal, st.testPattern);
-  // The sensitivity slider works while oscillopsia is running.
-  if (st.episode) st.episode.o.sensitivity = s.vr.oscillopsiaSensitivity;
+  // The sensitivity and strength sliders work while a condition is running.
+  if (st.episode) {
+    st.episode.o.sensitivity = s.vr.oscillopsiaSensitivity;
+    if (typeof s.vr.intensity === 'number') st.episode.o.intensity = s.vr.intensity;
+  }
 });
 socket.on('vr:cal', (msg) => applyCal(msg.cal, msg.testPattern));
 function applyCal(cal, testPattern) {
@@ -207,13 +210,14 @@ socket.on('disconnect', () => (setupStatus.textContent = 'Not connected – chec
 socket.on('vr:start', (msg) => {
   if (!st.ready) return;
   const levels = (st.settings && st.settings.intensityLevels) || { low: 0.35, medium: 0.6, high: 0.85 };
+  const intensity = typeof msg.intensity === 'number' ? msg.intensity : levels[msg.intensity] || levels.low;
   const v = msg.vr || {};
   st.lang = msg.lang || 'en';
   st.condition = msg.condition;
   st.episode = new Effects.Episode(
     {
       condition: msg.condition,
-      intensity: levels[msg.intensity] || levels.low,
+      intensity,
       duration: msg.duration,
       rampSec: v.rampSec,
       bppvTiltDeg: v.bppvTiltDeg,
@@ -342,4 +346,5 @@ function frame(now) {
 I18n.load().catch(() => {});
 requestAnimationFrame(frame);
 window.__vr = st; // for automated tests
+window.__vrView = view;
 window.__snd = () => sound && { tinnitus: sound.tinGain.gain.value, muffled: sound.mufGain.gain.value, testing: sound.ac.currentTime < sound.testUntil };

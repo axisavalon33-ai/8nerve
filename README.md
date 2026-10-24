@@ -173,7 +173,13 @@ Open `https://<laptop-ip>:8443/ear/host` (on the laptop or your own phone). Defa
 - **STOP VR:** the same as the red STOP on the tablet.
 - **Results:** counts (total, today, by band, by language) and the last 30 results **with the SRT in dB** (visitors never see dB).
   *Download CSV* for your own analysis, *Reset results* to empty the list.
+- **Calibrate with normal listeners:** switch on **Calibration mode** (or tick *Normal listener* next to a result) and let
+  10–20 people with normal hearing do the test in each language. Their results are not counted as visitors. For each language
+  the page shows the number of people, average, SD and a **suggested band** (GOOD ≤ average + 2 SD, REFER > that + 3 dB);
+  **Use for <language>** or **Use for all languages** applies it. Switch calibration mode OFF before visitors arrive.
 - **VR experience – live controls** (saved at once, used from the next START):
+  - **Effect strength** 10–100 % with Low / Medium / High buttons – works even during a running condition and is shown on the
+    tablet's VR screens and on the host status;
   - **Length** of each condition with **− / +** (5 s steps, 10–60 s, default **30 s**);
   - **Tinnitus / ringing** volume (default 30 %) and **Muffled hearing + fullness** volume, each with **▶ Test sound**
     (3 s on the phone's earphones). Both are made in code, fade in gently and can never go above a safe maximum;
@@ -219,9 +225,9 @@ compressor and a master limit). At the start the phone says a short instruction 
 
 | Condition | What the visitor sees / hears |
 |---|---|
-| **BPPV (right ear)** | Nothing until the head tilts **right** > 30°. Tilting left does nothing. After 2.5 s: torsional rotation + up-beating nystagmus that builds up, peaks and fades over the set length (default 30 s). If no tilt comes within 30 s, it ends by itself. |
-| **Vestibular neuritis** | Steady horizontal nystagmus: slow drift (0.4 s) then fast snap back (0.08 s) with slight motion blur, about 2 beats per second. |
-| **Ménière's disease** | Spinning episode (faster nystagmus + slow swaying rotation) and, in the earphones, ringing (tinnitus), muffled "through a wall" sound and a deep pressure rumble (fullness). |
+| **BPPV (right ear)** | Nothing until the head tilts **right** > 30°. The room then also turns (torsional spin up to 60°/s × strength). Tilting left does nothing. After 2.5 s: torsional rotation + up-beating nystagmus that builds up, peaks and fades over the set length (default 30 s). If no tilt comes within 30 s, it ends by itself. |
+| **Vestibular neuritis** | Slow turning of the room (up to 30°/s × strength) and steady horizontal nystagmus: slow drift (0.4 s) then fast snap back (0.08 s) with slight motion blur, about 2 beats per second. |
+| **Ménière's disease** | Spinning episode: the room keeps turning (up to 90°/s × strength) plus faster nystagmus and, in the earphones, ringing (tinnitus), muffled "through a wall" sound and a deep pressure rumble (fullness). |
 | **Oscillopsia** | The picture only moves when the head moves: each turn/nod throws the picture along with it and it bounces back (spring). Still head = still picture. Uses the gyroscope; phones without one use the orientation sensor instead. |
 
 **STOP** (tablet or host) sets the phone **instantly** to the plain, still camera view, switches the sound and voice off and shows
@@ -239,7 +245,7 @@ when the phone is held sideways in a VR box.
 ```
 npm test
 ```
-36 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
+38 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
 the noise generator, silence trimming/normalising, the WAV file, the nystagmus timing, BPPV (right tilt only, delay, build-up and
 fade, ends by itself), the 20 s limit and ramp, oscillopsia (still head = still picture), the head-tilt maths, the server API, the
 PIN protection, anonymous result saving, settings limits, digit upload, STOP from tablet → phone, headset calibration (limits,

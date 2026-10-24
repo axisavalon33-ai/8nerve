@@ -45,6 +45,12 @@
     }
   }
 
+  // Bands for one language: its own calibrated bands if set, otherwise the common ones.
+  function bandsFor(bands, lang) {
+    const own = bands.perLang && bands.perLang[lang];
+    return own || { good: bands.good, refer: bands.refer };
+  }
+
   function bandFor(srt, bands) {
     if (srt <= bands.good) return 'good';
     if (srt <= bands.refer) return 'borderline';
@@ -75,5 +81,5 @@
     return Math.min(0.97, Math.max(0.03, p));
   }
 
-  return { makeTriplet, isCorrect, Staircase, bandFor, levelsFor, gaugePosition };
+  return { makeTriplet, isCorrect, Staircase, bandsFor, bandFor, levelsFor, gaugePosition };
 });

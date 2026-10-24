@@ -134,13 +134,15 @@ test('BPPV: nothing until the head tilts RIGHT, then delay, then a build-up and 
   out = ep.update(3000, { tilt: 40 });
   assert.equal(out.roll, 0); // still in the 2.5 s delay
   ep.update(4600, { tilt: 40 }); // delay over -> running
-  let maxRoll = 0;
+  let maxSpin = 0;
   for (let t = 4600; t < 4600 + 18000; t += 16) {
     out = ep.update(t, { tilt: 40 });
-    maxRoll = Math.max(maxRoll, Math.abs(out.roll));
-    assert.ok(Math.abs(out.roll) <= 15);
+    maxSpin = Math.max(maxSpin, out.spinRate);
+    assert.ok(out.spinRate <= Effects.MAX_SPIN_RATE);
   }
-  assert.ok(maxRoll > 12, 'reaches near ±15° at full intensity');
+  assert.ok(maxSpin > 50, 'the room clearly spins at full intensity');
+  const upright = (((out.roll % 360) + 540) % 360) - 180;
+  assert.ok(Math.abs(upright) < 1, 'turned back upright just before the end');
   out = ep.update(4600 + 18001, {});
   assert.equal(out.done, true);
 });
@@ -213,4 +215,33 @@ test('head roll from gravity (landscape phone in a VR box)', () => {
   assert.ok(Math.abs(Effects.headRoll(9.8 * Math.cos(a), 9.8 * Math.sin(a), 90) - 35) < 1e-9);
   // Same physical tilt with the phone turned the other way round (screen angle 270).
   assert.ok(Math.abs(Effects.headRoll(-9.8 * Math.cos(a), -9.8 * Math.sin(a), 270) - 35) < 1e-9);
+});
+
+test('spinning: gentle start, speed limit, ends upright, scales with strength', () => {
+  for (const condition of ['bppv', 'neuritis', 'menieres']) {
+    for (const intensity of [0.35, 1]) {
+      const ep = new Effects.Episode({ condition, intensity, duration: 30, rampSec: 3 }, 0);
+      ep.phase = 'running'; // skip the BPPV head-tilt wait
+      let o;
+      let peak = 0;
+      let total = 0;
+      for (let t = 0; t < 30000; t += 16) {
+        o = ep.update(t, { tilt: 40 });
+        if (t < 300) assert.ok(o.spinRate < 5, `${condition}: starts gently`);
+        assert.ok(o.spinRate <= Effects.MAX_SPIN_RATE);
+        peak = Math.max(peak, o.spinRate);
+        total += o.spinRate * 0.016;
+      }
+      // last frame before the end: upright again (a multiple of 360°)
+      const r = (((o.roll % 360) + 540) % 360) - 180;
+      assert.ok(Math.abs(r) < 2, `${condition} @${intensity}: ends upright (${r.toFixed(2)}°)`);
+      if (condition === 'menieres') {
+        assert.ok(total > (intensity === 1 ? 900 : 300), `Ménière's turns the room clearly (${Math.round(total)}° in total)`);
+      }
+    }
+  }
+  const osc = new Effects.Episode({ condition: 'oscillopsia', intensity: 1, duration: 20 }, 0);
+  let o;
+  for (let t = 0; t < 10000; t += 16) o = osc.update(t, {});
+  assert.equal(o.spinRate, 0, 'oscillopsia does not spin by itself');
 });

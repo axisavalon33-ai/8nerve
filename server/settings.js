@@ -28,7 +28,9 @@ const DEFAULTS = {
   pin: '2468',
   // Result bands (PLACEHOLDERS – confirm with an ENT / audiology lecturer).
   // SRT <= good -> GOOD, good < SRT <= refer -> BORDERLINE, SRT > refer -> REFER
-  bands: { good: -10, refer: -7 },
+  // perLang: optional own bands per language (set from "Calibrate with normal listeners"); null = use the common ones.
+  bands: { good: -10, refer: -7, perLang: { en: null, ta: null, si: null } },
+  calibrationMode: false, // ON: new results are marked as "normal listener" (calibration), not visitors
   din: {
     practiceTrials: 2,
     testTrials: 24,
@@ -43,7 +45,7 @@ const DEFAULTS = {
   idleTimeoutSec: 60,
   testIdleTimeoutSec: 180, // safety net if a visitor walks away in the middle of a test (0 = never)
   vr: {
-    intensity: 'low',
+    intensity: 0.35, // 0.1–1 (Low 0.35 / Medium 0.6 / High 0.85)
     durations: { bppv: 30, neuritis: 30, menieres: 30, oscillopsia: 30 }, // 10–60 s, + / − on the host page
     rampSec: 3,
     bppvTiltDeg: 30,
@@ -76,7 +78,9 @@ function sanitize(input, base = DEFAULTS) {
     bands: {
       good: clampNum(b.good, -30, 10, base.bands.good),
       refer: clampNum(b.refer, -30, 10, base.bands.refer),
+      perLang: {},
     },
+    calibrationMode: typeof s.calibrationMode === 'boolean' ? s.calibrationMode : !!base.calibrationMode,
     din: {
       practiceTrials: Math.round(clampNum(d.practiceTrials, 0, 5, base.din.practiceTrials)),
       testTrials: Math.round(clampNum(d.testTrials, 6, 40, base.din.testTrials)),
@@ -91,7 +95,7 @@ function sanitize(input, base = DEFAULTS) {
     idleTimeoutSec: Math.round(clampNum(s.idleTimeoutSec, 15, 600, base.idleTimeoutSec)),
     testIdleTimeoutSec: Math.round(clampNum(s.testIdleTimeoutSec, 0, 1800, base.testIdleTimeoutSec)),
     vr: {
-      intensity: Object.hasOwn(INTENSITY_LEVELS, v.intensity) ? v.intensity : base.vr.intensity,
+      intensity: intensityValue(v.intensity, base.vr.intensity),
       durations: {},
       rampSec: clampNum(v.rampSec, 1, 6, base.vr.rampSec),
       bppvTiltDeg: clampNum(v.bppvTiltDeg, 10, 60, base.vr.bppvTiltDeg),
@@ -109,6 +113,18 @@ function sanitize(input, base = DEFAULTS) {
   }
   // The good limit must not be above the refer limit.
   if (out.bands.good > out.bands.refer) out.bands.good = out.bands.refer;
+  const pl = b.perLang || {};
+  const basePl = (base.bands && base.bands.perLang) || {};
+  for (const lang of ['en', 'ta', 'si']) {
+    const src = lang in pl ? pl[lang] : basePl[lang];
+    if (src && typeof src === 'object' && Number.isFinite(Number(src.good)) && Number.isFinite(Number(src.refer))) {
+      const good = clampNum(src.good, -30, 10, out.bands.good);
+      const refer = clampNum(src.refer, -30, 10, out.bands.refer);
+      out.bands.perLang[lang] = { good: Math.min(good, refer), refer };
+    } else {
+      out.bands.perLang[lang] = null;
+    }
+  }
   if (out.din.scoreFrom > out.din.testTrials) out.din.scoreFrom = 1;
   return out;
 }
@@ -178,10 +194,23 @@ class SettingsStore {
   }
 }
 
+// Intensity as a number 0.1–1; older settings used the words low / medium / high.
+function intensityValue(v, fallback) {
+  if (typeof v === 'string' && Object.hasOwn(INTENSITY_LEVELS, v)) return INTENSITY_LEVELS[v];
+  const fb = typeof fallback === 'string' ? INTENSITY_LEVELS[fallback] || 0.35 : fallback;
+  return Math.round(clampNum(v, 0.1, 1, fb) * 100) / 100;
+}
+
+// The bands that apply to one language: its own calibrated bands, or the common ones.
+function bandsFor(bands, lang) {
+  const own = bands.perLang && bands.perLang[lang];
+  return own || { good: bands.good, refer: bands.refer };
+}
+
 function bandFor(srt, bands) {
   if (srt <= bands.good) return 'good';
   if (srt <= bands.refer) return 'borderline';
   return 'refer';
 }
 
-module.exports = { SettingsStore, DEFAULTS, CAL_LIMITS, CAL_DEFAULTS, sanitizeCal, CONDITIONS, INTENSITY_LEVELS, MIN_CONDITION_SEC, MAX_CONDITION_SEC, sanitize, merge, bandFor };
+module.exports = { SettingsStore, DEFAULTS, bandsFor, intensityValue, CAL_LIMITS, CAL_DEFAULTS, sanitizeCal, CONDITIONS, INTENSITY_LEVELS, MIN_CONDITION_SEC, MAX_CONDITION_SEC, sanitize, merge, bandFor };

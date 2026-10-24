@@ -472,3 +472,62 @@ h3 {
 .file-btn input {
   display: none;
 }
+
+/* calibration */
+.calib-toggle {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 10px 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--mist);
+  font-size: 17px;
+}
+.calib-toggle input {
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+.calib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+.calib-lang {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--mist);
+}
+.calib-lang h3 {
+  margin: 0 0 6px;
+}
+.calib-lang .vals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+.calib-lang .vals span {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.calib-lang .suggest {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #e9ddff;
+  font-weight: 700;
+}
+.calib-lang .current {
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+.presets {
+  display: flex;
+  gap: 4px;
+}

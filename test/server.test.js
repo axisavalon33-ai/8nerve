@@ -39,8 +39,8 @@ test('pages are served', async () => {
 test('public config does not leak the PIN', async () => {
   const { body } = await json('/api/config');
   assert.equal(body.pin, undefined);
-  assert.deepEqual(body.bands, { good: -10, refer: -7 });
-  assert.equal(body.vr.intensity, 'low');
+  assert.deepEqual(body.bands, { good: -10, refer: -7, perLang: { en: null, ta: null, si: null } });
+  assert.equal(body.vr.intensity, 0.35);
 });
 
 test('results are saved anonymously with the band worked out on the server', async () => {
@@ -51,7 +51,7 @@ test('results are saved anonymously with the band worked out on the server', asy
   assert.equal((await post({ lang: 'xx', srt: 1 })).status, 400);
   const saved = JSON.parse(fs.readFileSync(path.join(dataDir, 'ear_results.json'), 'utf8'));
   assert.equal(saved.length, 3);
-  assert.deepEqual(Object.keys(saved[2]).sort(), ['band', 'lang', 'srt', 'time']);
+  assert.deepEqual(Object.keys(saved[2]).sort(), ['band', 'id', 'lang', 'srt', 'time']); // no names
 });
 
 test('host API needs the PIN', async () => {
@@ -73,11 +73,11 @@ test('settings are saved and kept within safe limits', async () => {
   assert.equal(body.vr.durations.neuritis, 45);
   assert.equal(body.vr.durations.oscillopsia, 30); // default 30 s
   assert.equal(body.vr.tinnitusVolume, 1); // never above 100 %
-  assert.equal(body.vr.intensity, 'medium');
+  assert.equal(body.vr.intensity, 0.6); // the old word 'medium' still works
   assert.equal(body.bands.good, -11);
   assert.equal(body.bands.refer, -7);
   const reset = await json('/api/host/settings/reset', { method: 'POST', headers: PIN });
-  assert.equal(reset.body.vr.intensity, 'low');
+  assert.equal(reset.body.vr.intensity, 0.35);
 });
 
 test('digit upload (PIN); a language uses one complete set – never mixed', async () => {
@@ -166,7 +166,7 @@ test('STOP on the tablet reaches the VR phone; START carries the settings', asyn
   const s = await started;
   assert.equal(s.condition, 'bppv');
   assert.equal(s.lang, 'ta');
-  assert.equal(s.intensity, 'low');
+  assert.equal(s.intensity, 0.35);
   assert.equal(s.duration, 30);
 
   const statusSeen = new Promise((r) => host.on('status', (st) => st.vr.state === 'running' && r(st)));
@@ -264,4 +264,42 @@ test('placeholder digits made with espeak-ng are trimmed and normalised', { skip
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('calibrate with normal listeners: mode, marking, statistics, suggested and per-language bands', async () => {
+  const put = (body) => json('/api/host/settings', { method: 'PUT', headers: { ...PIN, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const post = (b) => json('/api/ear/results', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) });
+  const before = (await json('/api/host/results', { headers: PIN })).body.counts.total;
+
+  await put({ calibrationMode: true });
+  const srts = [-8, -7.5, -8.5, -7, -8, -9];
+  for (const srt of srts) assert.equal((await post({ lang: 'ta', srt })).body.calib, true);
+  await put({ calibrationMode: false });
+  assert.equal((await post({ lang: 'ta', srt: -6 })).body.calib, false);
+
+  let sum = (await json('/api/host/results', { headers: PIN })).body;
+  assert.equal(sum.counts.total, before + 1, 'normal listeners are not counted as visitors');
+  const c = sum.calibration.ta;
+  assert.equal(c.n, 6);
+  assert.equal(c.mean, -8);
+  assert.ok(c.sd > 0.6 && c.sd < 0.8);
+  assert.deepEqual(c.suggested, { good: -6.5, refer: -3.5 }); // -8 + 2*0.71 = -6.58 -> rounded up to -6.5
+
+  // tick / untick a single result
+  const visitor = sum.recent.find((r) => !r.calib);
+  sum = (await json('/api/host/results/' + visitor.id, { method: 'PATCH', headers: { ...PIN, 'content-type': 'application/json' }, body: '{"calib":true}' })).body;
+  assert.equal(sum.calibration.ta.n, 7);
+  sum = (await json('/api/host/results/' + visitor.id, { method: 'PATCH', headers: { ...PIN, 'content-type': 'application/json' }, body: '{"calib":false}' })).body;
+  assert.equal(sum.calibration.ta.n, 6);
+
+  // own bands for Tamil only
+  const s = (await put({ bands: { perLang: { ta: c.suggested } } })).body;
+  assert.deepEqual(s.bands.perLang.ta, { good: -6.5, refer: -3.5 });
+  assert.equal(s.bands.perLang.en, null);
+  assert.equal((await post({ lang: 'ta', srt: -6 })).body.band, 'borderline', 'Tamil uses its own bands');
+  assert.equal((await post({ lang: 'en', srt: -6 })).body.band, 'refer', 'English still uses the common bands');
+  assert.equal((await put({ bands: { perLang: { ta: null } } })).body.bands.perLang.ta, null);
+
+  await json('/api/host/results/calibration', { method: 'DELETE', headers: PIN });
+  assert.equal((await json('/api/host/results', { headers: PIN })).body.calibration.ta.n, 0);
 });

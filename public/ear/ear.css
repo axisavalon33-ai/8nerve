@@ -822,3 +822,26 @@ body.stop-visible .screen {
     grid-template-columns: 1fr;
   }
 }
+
+/* effect strength badge on the VR screens */
+.strength {
+  display: inline-block;
+  margin: 0 0 18px;
+  padding: 8px 18px 8px 18px;
+  border-radius: 999px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(90deg, var(--violet) var(--pct, 0%), #b9a7e6 var(--pct, 0%));
+}
+.strength:empty {
+  display: none;
+}
+.calib-note {
+  margin: 12px 0 0;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: #fff4e5;
+  font-size: 20px;
+  font-weight: 700;
+}

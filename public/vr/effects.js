@@ -8,6 +8,9 @@
   const MAX_ROLL_DEG = 15; // torsional tilt limit at full intensity
   const MAX_SHIFT = 0.15; // never move the picture more than 15 % of the view
   const MAX_DURATION = 60; // seconds
+  const MAX_SPIN_RATE = 90; // deg/s – the fastest the room may spin (one turn every 4 s)
+  // Spinning speed at full intensity (deg/s); multiplied by the intensity (0.1–1) and the envelope.
+  const SPIN = { bppv: 60, neuritis: 30, menieres: 90, oscillopsia: 0 };
 
   const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
   const smoothstep = (x) => {
@@ -49,6 +52,8 @@
       this.done = false;
       this.reason = null;
       this.spring = { x: 0, y: 0, vx: 0, vy: 0 };
+      this.spin = 0; // accumulated spinning angle (degrees)
+      this.spinTarget = null; // upright angle the spin settles back to at the end
       this.lastNow = now;
     }
 
@@ -62,7 +67,8 @@
     update(now, sensors = {}) {
       const o = this.o;
       const I = o.intensity;
-      const dt = clamp((now - this.lastNow) / 1000, 0, 0.1);
+      const dt = clamp((now - this.lastNow) / 1000, 0, 0.1); // small steps keep the oscillopsia spring stable
+      const dtSpin = clamp((now - this.lastNow) / 1000, 0, 0.5); // real time, so a slow phone spins at the right speed
       this.lastNow = now;
       const out = { dx: 0, dy: 0, roll: 0, audio: 0, phase: this.phase, done: false };
       if (this.done) return { ...out, done: true };
@@ -89,11 +95,12 @@
       const t = (now - this.phaseStart) / 1000;
       if (t >= o.duration) return this.finish('complete', out);
       out.phase = 'running';
+      let env = 0; // the condition's envelope (0..1), also drives the spinning speed
 
       switch (o.condition) {
         case 'bppv': {
           // Right posterior-canal BPPV: torsional + up-beating nystagmus that builds, peaks and fades.
-          const env = bppvEnvelope(t / o.duration) * smoothstep(t / o.rampSec);
+          env = bppvEnvelope(t / o.duration) * smoothstep(t / o.rampSec);
           const n = nystagmus(t, 0.4, 0.08);
           out.roll = env * I * MAX_ROLL_DEG * n.pos;
           out.dy = env * I * (0.03 * n.pos + 0.02 * Math.sin(2 * Math.PI * 0.2 * t));
@@ -101,18 +108,18 @@
         }
         case 'neuritis': {
           // Steady horizontal nystagmus: drift one way, snap back.
-          const env = rampEnvelope(t, o.duration, o.rampSec);
+          env = rampEnvelope(t, o.duration, o.rampSec);
           const n = nystagmus(t, 0.4, 0.08);
-          out.dx = env * I * 0.07 * n.pos;
+          out.dx = env * I * 0.12 * n.pos;
           out.roll = env * I * 2 * n.pos;
           out.dy = env * I * 0.015 * Math.sin(2 * Math.PI * 0.15 * t);
           break;
         }
         case 'menieres': {
           // Spinning attack: faster horizontal nystagmus + slow swaying rotation, plus sound.
-          const env = rampEnvelope(t, o.duration, o.rampSec);
+          env = rampEnvelope(t, o.duration, o.rampSec);
           const n = nystagmus(t, 0.3, 0.07);
-          out.dx = env * I * 0.09 * n.pos;
+          out.dx = env * I * 0.12 * n.pos;
           out.roll = env * I * 10 * Math.sin(2 * Math.PI * 0.12 * t);
           out.dy = env * I * 0.02 * Math.sin(2 * Math.PI * 0.17 * t);
           out.audio = env;
@@ -144,6 +151,20 @@
       out.dx = clamp(out.dx, -MAX_SHIFT, MAX_SHIFT);
       out.dy = clamp(out.dy, -MAX_SHIFT, MAX_SHIFT);
       out.roll = clamp(out.roll, -MAX_ROLL_DEG, MAX_ROLL_DEG);
+
+      // The room spins: speed follows the envelope (gentle start, fade-out) and never exceeds MAX_SPIN_RATE.
+      // In the last part the picture turns smoothly back to upright, so it never ends tilted.
+      const rate = clamp(env * I * (SPIN[o.condition] || 0), 0, MAX_SPIN_RATE);
+      this.spin += rate * dtSpin;
+      const settle = o.condition === 'bppv' ? o.duration * 0.25 : Math.min(4, o.duration / 3);
+      const settleStart = o.duration - settle;
+      let spinShown = this.spin;
+      if (t >= settleStart) {
+        if (this.spinTarget === null) this.spinTarget = Math.round(this.spin / 360) * 360;
+        spinShown = this.spin + (this.spinTarget - this.spin) * smoothstep((t - settleStart) / settle);
+      }
+      out.spinRate = rate;
+      out.roll += spinShown;
       return out;
     }
 
@@ -196,5 +217,5 @@
     };
   }
 
-  return { Episode, nystagmus, bppvEnvelope, rampEnvelope, smoothstep, headRoll, headRates, orientationRateTracker, MAX_ROLL_DEG, MAX_SHIFT, MAX_DURATION };
+  return { Episode, nystagmus, bppvEnvelope, rampEnvelope, smoothstep, headRoll, headRates, orientationRateTracker, MAX_ROLL_DEG, MAX_SHIFT, MAX_DURATION, MAX_SPIN_RATE, SPIN };
 });
