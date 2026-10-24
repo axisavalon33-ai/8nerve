@@ -363,6 +363,8 @@
     const url = set[state.lang] || set.all;
     $('#vrPic').classList.toggle('hidden', !url);
     if (url) $('#vrPic').src = url;
+    // With a picture, the read stage shows only the picture (full screen) and the timer bar.
+    $('#vrRead').classList.toggle('pic-only', !!url);
     showStrength();
   }
 
