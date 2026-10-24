@@ -8,7 +8,7 @@ const { Server } = require('socket.io');
 const { SettingsStore, CONDITIONS, CAL_DEFAULTS, bandFor, bandsFor } = require('./settings');
 const { ResultsStore } = require('./results');
 const { lanAddresses } = require('./network');
-const { LANGS, AUDIO_EXTS, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus } = require('./media');
+const { LANGS, AUDIO_EXTS, IMAGE_EXTS, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus, imageStatus } = require('./media');
 const { generateDigits, findEspeak } = require('./digit-tts');
 const ROOT = path.join(__dirname, '..');
 
@@ -37,6 +37,7 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   app.get(['/ear/record', '/ear/record/'], page('ear/record.html'));
   app.get(['/ear/host', '/ear/host/'], page('ear/host.html'));
   app.get(['/vr', '/vr/'], page('vr/index.html'));
+  app.get(['/ear/display', '/ear/display/'], page('ear/display.html'));
   app.use(express.static(path.join(ROOT, 'public'), { index: false, maxAge: 0 }));
   app.use('/media', express.static(mediaDir, { maxAge: 0 }));
   // Three.js comes from node_modules (installed once with npm install) – no internet needed later.
@@ -48,6 +49,7 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   app.get('/api/ear/digits', (req, res) => res.json(digitManifest(mediaDir)));
   app.get('/api/ear/digits/status', async (req, res) => res.json({ status: digitStatus(mediaDir), espeak: !!(await findEspeak()), generating }));
   app.get('/api/vr/voice', (req, res) => res.json(voiceStatus(mediaDir, CONDITIONS)));
+  app.get('/api/vr/images', (req, res) => res.json(imageStatus(mediaDir, CONDITIONS)));
 
   app.post('/api/ear/results', express.json({ limit: '10kb' }), (req, res) => {
     const { lang, srt } = req.body || {};
@@ -132,6 +134,31 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
     fs.writeFileSync(path.join(mediaDir, rel, `${lang}.${ext}`), req.body);
     res.json(voiceStatus(mediaDir, CONDITIONS));
   });
+  // Picture for the monitor, per condition and language ('all' = any language without its own picture).
+  const imageUpload = express.raw({ type: () => true, limit: '20mb' });
+  const imagesChanged = () => io && io.emit('images', imageStatus(mediaDir, CONDITIONS));
+  app.put('/api/vr/images/:cond/:lang', requirePin, imageUpload, (req, res) => {
+    const { cond, lang } = req.params;
+    const ext = String(req.query.ext || 'jpg').toLowerCase();
+    if (!CONDITIONS.includes(cond) || ![...LANGS, 'all'].includes(lang) || !IMAGE_EXTS.includes(ext)) {
+      return res.status(400).json({ error: 'Bad condition, language or picture type (use JPG, PNG, WEBP or GIF)' });
+    }
+    if (!req.body || !req.body.length) return res.status(400).json({ error: 'Empty file' });
+    const rel = path.join('vr', 'images', cond);
+    fs.mkdirSync(path.join(mediaDir, rel), { recursive: true });
+    removeAudio(mediaDir, rel, lang, IMAGE_EXTS);
+    fs.writeFileSync(path.join(mediaDir, rel, `${lang}.${ext}`), req.body);
+    imagesChanged();
+    res.json(imageStatus(mediaDir, CONDITIONS));
+  });
+  app.delete('/api/vr/images/:cond/:lang', requirePin, (req, res) => {
+    const { cond, lang } = req.params;
+    if (!CONDITIONS.includes(cond) || ![...LANGS, 'all'].includes(lang)) return res.status(400).json({ error: 'Bad condition or language' });
+    removeAudio(mediaDir, path.join('vr', 'images', cond), lang, IMAGE_EXTS);
+    imagesChanged();
+    res.json(imageStatus(mediaDir, CONDITIONS));
+  });
+
   app.delete('/api/vr/voice/:cond/:lang', requirePin, (req, res) => {
     const { cond, lang } = req.params;
     if (!CONDITIONS.includes(cond) || !LANGS.includes(lang)) return res.status(400).json({ error: 'Bad condition or language' });
@@ -195,11 +222,13 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   const status = {
     tablet: { connected: 0, screen: null, lang: null, at: null },
     vr: { connected: 0, at: null },
+    display: { connected: 0, at: null },
   };
   let testPattern = false; // calibration test pattern on the phone (not saved)
   const broadcastStatus = () => {
     io.to('host').emit('status', status);
     io.to('tablet').emit('status', status);
+    io.to('display').emit('status', status);
   };
 
   function attach(httpServer) {
@@ -211,11 +240,15 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
         socket.disconnect(true);
         return;
       }
-      if (!['tablet', 'vr', 'host'].includes(role)) {
+      if (!['tablet', 'vr', 'host', 'display'].includes(role)) {
         socket.disconnect(true);
         return;
       }
       socket.join(role);
+      if (role === 'display') {
+        status.display.connected++;
+        status.display.at = Date.now();
+      }
       if (role === 'tablet' || role === 'vr') {
         status[role].connected++;
         status[role].at = Date.now();
@@ -233,6 +266,7 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
         if (role !== 'tablet' || !s) return;
         status.tablet.screen = String(s.screen || '').slice(0, 40);
         status.tablet.lang = LANGS.includes(s.lang) ? s.lang : null;
+        status.tablet.condition = CONDITIONS.includes(s.condition) ? s.condition : null;
         status.tablet.at = Date.now();
         broadcastStatus();
       });
@@ -300,7 +334,14 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
         io.to('tablet').emit('vr:ended', { condition: msg && msg.condition, reason: msg && msg.reason });
       });
 
+      // Host page: show a condition's picture on the monitor now (to check an uploaded picture).
+      socket.on('display:preview', (msg) => {
+        if (role !== 'host' || !msg || !CONDITIONS.includes(msg.condition) || !LANGS.includes(msg.lang)) return;
+        io.to('display').emit('display:preview', { condition: msg.condition, lang: msg.lang });
+      });
+
       socket.on('disconnect', () => {
+        if (role === 'display') status.display.connected = Math.max(0, status.display.connected - 1);
         if (role === 'tablet' || role === 'vr') {
           status[role].connected = Math.max(0, status[role].connected - 1);
           status[role].at = Date.now();

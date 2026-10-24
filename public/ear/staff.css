@@ -531,3 +531,20 @@ h3 {
   display: flex;
   gap: 4px;
 }
+
+/* monitor pictures */
+.thumb {
+  display: block;
+  width: 150px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: #dfe7f3;
+}
+.thumb.empty {
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  color: var(--ink-soft);
+}

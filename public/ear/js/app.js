@@ -36,7 +36,7 @@
     document.body.classList.toggle('no-nav', name === 'home' || name === 'vrRunning' || name === 'test');
     if (name === 'home') resetVisitor();
     updateStopButton();
-    socket.emit('tablet:status', { screen: name, lang: state.screen === 'home' ? null : state.lang });
+    sendTabletStatus();
     touch();
   }
 
@@ -46,7 +46,7 @@
     I18n.apply();
     Kiosk.update();
     if (state.vrCondition) fillVrTexts();
-    socket.emit('tablet:status', { screen: state.screen, lang });
+    sendTabletStatus();
   }
 
   function resetVisitor() {
@@ -58,6 +58,15 @@
     $('#langPopup').classList.add('hidden');
     audio.setVolume(0.5);
     $('#volSlider').value = 50;
+  }
+
+  // Screen, language and chosen VR condition -> server (host page + monitor display follow this).
+  function sendTabletStatus() {
+    socket.emit('tablet:status', {
+      screen: state.screen,
+      lang: state.screen === 'home' ? null : state.lang,
+      condition: VR_SCREENS.includes(state.screen) ? state.vrCondition : null,
+    });
   }
 
   // ---------------- idle timeout ----------------
@@ -387,7 +396,7 @@
     updateStopButton();
     updateVrProgress();
   });
-  socket.on('connect', () => socket.emit('tablet:status', { screen: state.screen, lang: state.lang }));
+  socket.on('connect', sendTabletStatus);
 
   // ---------------- hidden headset calibration ----------------
   // Press and hold the top-right corner for 3 s. Values go live to the phone over Socket.IO.

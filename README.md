@@ -52,6 +52,7 @@ media/ear/digits/ta/0..9
 media/ear/digits/si/0..9
 media/ear/digits-generated/  placeholder digits – made automatically with espeak-ng
 media/vr/voice/<condition>/<lang>.mp3   my spoken VR instructions (uploaded on the host page)
+media/vr/images/<condition>/<lang|all>.jpg   pictures for the monitor display (uploaded on the host page)
 ```
 
 ## Fullscreen and "Add to Home screen"
@@ -184,6 +185,12 @@ Open `https://<laptop-ip>:8443/ear/host` (on the laptop or your own phone). Defa
   - **Tinnitus / ringing** volume (default 30 %) and **Muffled hearing + fullness** volume, each with **▶ Test sound**
     (3 s on the phone's earphones). Both are made in code, fade in gently and can never go above a safe maximum;
   - **Oscillopsia sensitivity** (how strongly the picture follows head movement, ×0–×3).
+- **Monitor display:** a screen connected to the laptop shows, when a visitor chooses a condition on the tablet, that
+  condition's **picture in the visitor's language**, then after the **picture time** (− / +, 5–120 s, default 15 s)
+  **"Put on the VR headset to experience …"**; during the experience its progress, afterwards the explanation; otherwise the
+  welcome title. Upload a picture per condition for each language or for **All languages** (JPG/PNG/WEBP, best 1920 × 1080);
+  without a picture a text card is shown. **▶ Show on monitor** checks a picture. Setup: connect the monitor (HDMI),
+  **Win + P → Extend**, click **Open monitor page**, then **Show full screen on the monitor** (or drag it there and press F11).
 - **Head movement:** live values from the phone's motion sensors (tilt, turn, nod, roll) and a clear warning if there are none.
 - **Spoken instructions (VR):** for each condition and language – the text, **▶ On phone** (to hear it), **Upload MP3** to use
   your own recording, **Use phone voice** to go back. Without an MP3 the phone's text-to-speech reads the text (placeholder);
@@ -245,7 +252,7 @@ when the phone is held sideways in a VR box.
 ```
 npm test
 ```
-38 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
+39 tests check: the triplet rules, scoring, the 1-up/1-down staircase, the SRT (trials 5–24), the bands, constant loudness,
 the noise generator, silence trimming/normalising, the WAV file, the nystagmus timing, BPPV (right tilt only, delay, build-up and
 fade, ends by itself), the 20 s limit and ramp, oscillopsia (still head = still picture), the head-tilt maths, the server API, the
 PIN protection, anonymous result saving, settings limits, digit upload, STOP from tablet → phone, headset calibration (limits,

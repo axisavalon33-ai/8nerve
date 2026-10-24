@@ -58,6 +58,8 @@ const DEFAULTS = {
     oscillopsiaSensitivity: 1, // 0..3
   },
   vrCal: CAL_DEFAULTS,
+  // External monitor (/ear/display): how long the condition picture shows before "Put on the VR headset".
+  display: { imageSeconds: 15 },
 };
 
 function clampNum(v, min, max, fallback) {
@@ -108,6 +110,9 @@ function sanitize(input, base = DEFAULTS) {
     },
   };
   out.vrCal = sanitizeCal(s.vrCal, base.vrCal);
+  const disp = s.display || {};
+  const baseDisp = base.display || DEFAULTS.display;
+  out.display = { imageSeconds: Math.round(clampNum(disp.imageSeconds, 3, 120, baseDisp.imageSeconds)) };
   for (const c of CONDITIONS) {
     out.vr.durations[c] = Math.round(clampNum(vd[c], MIN_CONDITION_SEC, MAX_CONDITION_SEC, base.vr.durations[c]));
   }

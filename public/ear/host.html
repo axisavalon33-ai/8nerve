@@ -117,6 +117,34 @@
       </div>
 
       <div class="card">
+        <h2><span class="dot" id="dispDot"></span>Monitor display (screen connected to this laptop)</h2>
+        <p class="small-note">
+          When a visitor chooses a condition on the tablet, the monitor shows its picture in the visitor's language, then
+          "Put on the VR headset to experience …". During the experience it shows the progress, afterwards the explanation.
+        </p>
+        <ol class="small-note">
+          <li>Connect the monitor to the laptop (HDMI). In Windows press <b>⊞ Win + P</b> → <b>Extend</b>.</li>
+          <li>Click <b>Open monitor page</b>, then on that page click <b>Show full screen on the monitor</b>
+            (allow "window management" if Chrome asks). Or drag the window onto the monitor and press <b>F11</b>.</li>
+        </ol>
+        <div class="btn-row">
+          <button class="btn small" id="openDisplay" type="button">🖥 Open monitor page</button>
+          <span class="small-note" id="dispStatus"></span>
+        </div>
+        <h3>How long the picture shows before "Put on the VR headset"</h3>
+        <div class="dur-grid"><div class="dur" id="picTime"><span>Picture time</span><div class="pm">
+          <button type="button" id="picMinus">−</button><output id="picSec"></output><button type="button" id="picPlus">+</button>
+        </div></div></div>
+        <h3>Pictures for each condition</h3>
+        <p class="small-note">JPG / PNG / WEBP, landscape (best 1920 × 1080). "All languages" is used when a language has no picture of its own.
+          Without any picture a text card with the condition's explanation is shown.</p>
+        <table class="voice-table">
+          <thead><tr><th>Condition</th><th>English</th><th>தமிழ்</th><th>සිංහල</th><th>All languages</th></tr></thead>
+          <tbody id="imageTable"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
         <h2>Head movement (VR phone motion sensors)</h2>
         <p class="warning-box hidden" id="sensorWarning"></p>
         <dl class="kv">

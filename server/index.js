@@ -34,7 +34,8 @@ async function printWelcome(protocol, port) {
   console.log(' Ear & Balance is running');
   console.log('==============================================');
   console.log(`\n Host page (this laptop): ${hostUrl}`);
-  console.log(' It opens by itself. It shows QR codes for the tablet and the VR phone.\n');
+  console.log(' It opens by itself. It shows QR codes for the tablet and the VR phone.');
+  console.log(` Monitor display (external screen): ${protocol}://localhost:${port}/ear/display\n`);
   if (best) {
     const tabletUrl = `${protocol}://${best.ip}:${port}/ear`;
     console.log(` Tablet: scan this QR code, or type ${tabletUrl}`);

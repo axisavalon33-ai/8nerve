@@ -2,15 +2,17 @@
 //   media/ear/digits/<lang>/N.*            my recordings (from /ear/record or uploaded on the host page)
 //   media/ear/digits-generated/<lang>/N.wav placeholders made with espeak-ng
 //   media/vr/voice/<condition>/<lang>.*     my own spoken instruction for a VR condition
+//   media/vr/images/<condition>/<lang|all>.* picture shown on the monitor when a condition is chosen
 const fs = require('fs');
 const path = require('path');
 
 const LANGS = ['en', 'ta', 'si'];
 const AUDIO_EXTS = ['mp3', 'wav', 'webm', 'ogg', 'm4a']; // first one found is used
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
-// URL of dir/base.<ext> (first existing extension), with ?v= so browsers never play an old cached copy.
-function findAudio(mediaDir, relDir, base) {
-  for (const ext of AUDIO_EXTS) {
+// URL of dir/base.<ext> (first existing extension), with ?v= so browsers never show an old cached copy.
+function findAudio(mediaDir, relDir, base, exts = AUDIO_EXTS) {
+  for (const ext of exts) {
     const f = path.join(mediaDir, relDir, `${base}.${ext}`);
     if (fs.existsSync(f)) {
       const v = Math.round(fs.statSync(f).mtimeMs);
@@ -20,8 +22,8 @@ function findAudio(mediaDir, relDir, base) {
   return null;
 }
 
-function removeAudio(mediaDir, relDir, base) {
-  for (const ext of AUDIO_EXTS) fs.rmSync(path.join(mediaDir, relDir, `${base}.${ext}`), { force: true });
+function removeAudio(mediaDir, relDir, base, exts = AUDIO_EXTS) {
+  for (const ext of exts) fs.rmSync(path.join(mediaDir, relDir, `${base}.${ext}`), { force: true });
 }
 
 // Per language: my recordings, generated digits, and which complete set is used.
@@ -65,4 +67,14 @@ function voiceStatus(mediaDir, conditions) {
   return out;
 }
 
-module.exports = { LANGS, AUDIO_EXTS, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus };
+// Monitor pictures: { condition: { en, ta, si, all } } – 'all' is used for a language without its own picture.
+function imageStatus(mediaDir, conditions) {
+  const out = {};
+  for (const c of conditions) {
+    out[c] = {};
+    for (const key of [...LANGS, 'all']) out[c][key] = findAudio(mediaDir, path.join('vr', 'images', c), key, IMAGE_EXTS);
+  }
+  return out;
+}
+
+module.exports = { LANGS, AUDIO_EXTS, IMAGE_EXTS, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus, imageStatus };

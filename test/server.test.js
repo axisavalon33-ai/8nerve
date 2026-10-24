@@ -303,3 +303,48 @@ test('calibrate with normal listeners: mode, marking, statistics, suggested and 
   await json('/api/host/results/calibration', { method: 'DELETE', headers: PIN });
   assert.equal((await json('/api/host/results', { headers: PIN })).body.calibration.ta.n, 0);
 });
+
+test('monitor display: follows the tablet, pictures per condition/language, picture time setting, preview', async () => {
+  assert.equal((await fetch(base + '/ear/display')).status, 200);
+  // picture time: 3–120 s, default 15
+  assert.equal((await json('/api/config')).body.display.imageSeconds, 15);
+  const put = (body) => json('/api/host/settings', { method: 'PUT', headers: { ...PIN, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  assert.equal((await put({ display: { imageSeconds: 999 } })).body.display.imageSeconds, 120);
+  assert.equal((await put({ display: { imageSeconds: 20 } })).body.display.imageSeconds, 20);
+
+  // pictures
+  assert.equal((await fetch(`${base}/api/vr/images/menieres/ta?ext=png`, { method: 'PUT', body: 'x' })).status, 401);
+  assert.equal((await fetch(`${base}/api/vr/images/menieres/ta?ext=exe`, { method: 'PUT', headers: PIN, body: 'x' })).status, 400);
+  let imgs = (await json('/api/vr/images/menieres/ta?ext=png', { method: 'PUT', headers: PIN, body: 'PNGfake' })).body;
+  assert.match(imgs.menieres.ta, /^\/media\/vr\/images\/menieres\/ta\.png\?v=/);
+  imgs = (await json('/api/vr/images/menieres/all?ext=jpg', { method: 'PUT', headers: PIN, body: 'JPGfake' })).body;
+  assert.match(imgs.menieres.all, /all\.jpg/);
+  assert.equal(imgs.bppv.en, null);
+  assert.equal((await fetch(base + imgs.menieres.ta)).status, 200);
+  imgs = (await json('/api/vr/images/menieres/ta', { method: 'DELETE', headers: PIN })).body;
+  assert.equal(imgs.menieres.ta, null);
+
+  // the monitor gets the tablet's screen, language and chosen condition
+  const connect = (auth) =>
+    new Promise((resolve) => {
+      const s = ioClient(base, { auth, transports: ['websocket'] });
+      s.on('connect', () => resolve(s));
+    });
+  const display = await connect({ role: 'display' });
+  const tablet = await connect({ role: 'tablet' });
+  const host = await connect({ role: 'host', pin: '2468' });
+  try {
+    const seen = new Promise((r) => display.on('status', (st) => st.tablet.condition === 'menieres' && r(st)));
+    tablet.emit('tablet:status', { screen: 'vrIntro', lang: 'si', condition: 'menieres' });
+    const st = await seen;
+    assert.equal(st.tablet.lang, 'si');
+    assert.equal(st.tablet.screen, 'vrIntro');
+    assert.ok(st.display.connected >= 1, 'host page can see the monitor is open');
+    const prev = new Promise((r) => display.once('display:preview', r));
+    host.emit('display:preview', { condition: 'bppv', lang: 'ta' });
+    assert.deepEqual(await prev, { condition: 'bppv', lang: 'ta' });
+  } finally {
+    for (const c of [display, tablet, host]) c.close();
+  }
+  await put({ display: { imageSeconds: 15 } });
+});

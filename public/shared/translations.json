@@ -273,6 +273,18 @@
     "si": "බලපෑමේ ප්‍රබලතාව",
     "needsReview": true
   },
+  "display.wear": {
+    "en": "Put on the VR headset to experience",
+    "ta": "அனுபவிக்க VR கண்ணாடியை அணியுங்கள்",
+    "si": "අත්විඳීමට VR කණ්ණාඩිය පළඳින්න",
+    "needsReview": true
+  },
+  "display.wearHint": {
+    "en": "Please sit down. The helper will help you put it on.",
+    "ta": "தயவுசெய்து அமருங்கள். உதவியாளர் அணிய உதவுவார்.",
+    "si": "කරුණාකර වාඩි වන්න. පැළඳීමට උදව්කරු උදව් කරයි.",
+    "needsReview": true
+  },
   "vr.start": { "en": "START", "ta": "START", "si": "START" },
   "vr.stop": { "en": "STOP", "ta": "STOP", "si": "STOP" },
   "vr.phoneMissing": {

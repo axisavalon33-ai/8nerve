@@ -35,6 +35,14 @@
     Staff.api('/api/host/settings').then(fillForm);
     Staff.api('/api/host/links').then(renderLinks);
     I18n.load().then(loadVoices);
+    loadImages();
+    socket.on('images', (m) => {
+      imageFiles = m;
+      renderImages();
+    });
+    $('#openDisplay').addEventListener('click', () => window.open('/ear/display', 'earDisplay', 'popup,width=1280,height=720'));
+    $('#picMinus').addEventListener('click', () => changePicTime(-5));
+    $('#picPlus').addEventListener('click', () => changePicTime(5));
     fetch('/api/ear/digits/status').then((r) => r.json()).then(renderDigitAudio);
     setupLive();
     $('#regenDigits').addEventListener('click', async () => {
@@ -180,6 +188,10 @@
     if (document.activeElement !== $('#vrStrength')) $('#vrStrength').value = pct;
     $('#vrStrengthOut').textContent = pct + '%';
     $('#vrStrengthStatus').textContent = strengthName(pub.vr.intensity);
+    const pic = (pub.display && pub.display.imageSeconds) || 15;
+    $('#picSec').textContent = pic + ' s';
+    $('#picMinus').disabled = pic <= 5;
+    $('#picPlus').disabled = pic >= 120;
     for (const c of CONDS) {
       const v = pub.vr.durations[c];
       $('#dur-' + c).textContent = v + ' s';
@@ -229,6 +241,65 @@
     }
     $('#sensorWarning').textContent = warn;
     $('#sensorWarning').classList.toggle('hidden', !warn);
+  }
+
+  // ---------- monitor display ----------
+  let imageFiles = {};
+  async function loadImages() {
+    imageFiles = await fetch('/api/vr/images').then((r) => r.json());
+    renderImages();
+  }
+  function changePicTime(step) {
+    if (!live) return;
+    const cur = (live.display && live.display.imageSeconds) || 15;
+    const next = Math.min(120, Math.max(5, cur + step));
+    live.display = { imageSeconds: next };
+    renderLive(live);
+    saveLive({ display: { imageSeconds: next } });
+  }
+  function renderImages() {
+    const tbody = $('#imageTable');
+    tbody.innerHTML = '';
+    for (const c of CONDS) {
+      const tr = el('tr');
+      tr.append(el('td', '', COND_NAMES[c]));
+      for (const key of [...LANGS, 'all']) {
+        const td = el('td', 'voice-cell');
+        const url = imageFiles[c] && imageFiles[c][key];
+        if (url) {
+          const img = el('img', 'thumb');
+          img.src = url;
+          td.append(img);
+        } else {
+          td.append(el('div', 'thumb empty', key === 'all' ? 'no picture' : 'uses "All" / text card'));
+        }
+        td.append(
+          fileButton('⬆ Upload', async (file) => {
+            const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+            try {
+              imageFiles = await Staff.api(`/api/vr/images/${c}/${key}?ext=${encodeURIComponent(ext)}`, { method: 'PUT', body: file });
+              renderImages();
+            } catch (e) {
+              alert('Could not upload: ' + e.message);
+            }
+          }),
+        );
+        if (url)
+          td.append(
+            button(
+              '✕ Remove',
+              async () => {
+                imageFiles = await Staff.api(`/api/vr/images/${c}/${key}`, { method: 'DELETE' });
+                renderImages();
+              },
+              'mini danger',
+            ),
+          );
+        td.append(button('▶ Show on monitor', () => hostSocket && hostSocket.emit('display:preview', { condition: c, lang: key === 'all' ? 'en' : key })));
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
   }
 
   // ---------- spoken instructions ----------
@@ -388,6 +459,9 @@
     $('#tabConn').textContent = tab.connected ? `Yes (${tab.connected})` : 'No';
     $('#tabScreen').textContent = (tab.screen || '–') + ago(tab.at);
     $('#tabLang').textContent = LANG_NAMES[tab.lang] || '–';
+    const disp = s.display || {};
+    $('#dispDot').className = 'dot' + (disp.connected ? ' on' : '');
+    $('#dispStatus').textContent = disp.connected ? 'Monitor page is open ✓' : 'Monitor page is not open';
 
     $('#vrDot').className = 'dot' + (vr.connected ? (vr.ready ? ' on' : ' warn') : '');
     $('#vrConn').textContent = vr.connected ? `Yes (${vr.connected})` : 'No';
