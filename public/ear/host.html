@@ -21,10 +21,38 @@
     <div class="wrap hidden" id="main">
       <h1>Ear &amp; Balance – Host</h1>
 
-      <div class="card connect">
-        <h2>Connect the tablet and the VR phone</h2>
+      <div class="card vr-control">
+        <h2>VR control</h2>
         <p class="small-note">
-          On the tablet / phone: open the <b>Camera</b> app (or Google Lens) and point it at the QR code, then tap the link.
+          The visitor gives consent and chooses a condition on the monitor (or you choose it here after asking them). The monitor
+          shows the picture, then "Put on the VR headset". When the visitor is seated with the headset and headphones on, press
+          <b>START</b>. <b>STOP</b> (or the <b>Esc</b> key) makes the view calm and still at once.
+        </p>
+        <div class="vc-grid">
+          <dl class="kv">
+            <dt>Visitor screen</dt><dd id="vcScreen">–</dd>
+            <dt>Language</dt><dd id="vcLang">–</dd>
+            <dt>Consent</dt><dd id="vcConsent">–</dd>
+            <dt>Condition</dt><dd id="vcCond">–</dd>
+            <dt>VR phone</dt><dd id="vcPhone">–</dd>
+          </dl>
+          <div>
+            <p class="vc-label">Choose a condition for the visitor:</p>
+            <div class="vc-conds" id="vcConds"></div>
+          </div>
+        </div>
+        <div class="vc-buttons">
+          <button class="btn vc-start" id="vcStart" type="button">▶ START</button>
+          <button class="btn danger vc-stop" id="vcStop" type="button">■ STOP</button>
+        </div>
+        <div class="progress"><div id="vcProgress"></div></div>
+        <p class="vc-hint" id="vcHint"></p>
+      </div>
+
+      <div class="card connect">
+        <h2>Connect the VR phone</h2>
+        <p class="small-note">
+          On the phone: open the <b>Camera</b> app (or Google Lens) and point it at the QR code, then tap the link.
           If Chrome says <i>"Your connection is not private"</i>, tap <b>Advanced → Proceed</b> (it is your own laptop).
           The devices must be on the <b>same Wi-Fi</b> as this laptop.
         </p>
@@ -36,7 +64,7 @@
         <details>
           <summary>Still not connecting?</summary>
           <ul class="small-note">
-            <li>Check the tablet and phone are on the <b>same Wi-Fi</b> as the laptop (not a "guest" network – guest networks block devices from seeing each other).</li>
+            <li>Check the phone is on the <b>same Wi-Fi</b> as the laptop (not a "guest" network – guest networks block devices from seeing each other).</li>
             <li><b>Windows Firewall (most common cause):</b> in the project folder, right-click <code>allow-firewall-windows.cmd</code> →
               <i>Run as administrator</i>. Or: Start → type <i>Allow an app through Windows Firewall</i> → <i>Change settings</i> → tick <b>Node.js</b> for <b>Private</b> (and Public) → OK.
               Also set the Wi-Fi to <i>Private network</i> (Settings → Network → Wi-Fi → your network → Private).</li>
@@ -48,7 +76,7 @@
 
       <div class="grid">
         <div class="card">
-          <h2><span class="dot" id="tabDot"></span>Tablet (/ear)</h2>
+          <h2><span class="dot" id="tabDot"></span>Visitor screen (monitor)</h2>
           <dl class="kv">
             <dt>Connected</dt><dd id="tabConn">–</dd>
             <dt>Screen</dt><dd id="tabScreen">–</dd>
@@ -117,31 +145,39 @@
       </div>
 
       <div class="card">
-        <h2><span class="dot" id="dispDot"></span>Monitor display (screen connected to this laptop)</h2>
+        <h2>Visitor screen on the monitor</h2>
         <p class="small-note">
-          When a visitor chooses a condition on the tablet, the monitor shows its picture in the visitor's language, then
-          "Put on the VR headset to experience …". During the experience it shows the progress, afterwards the explanation.
+          The visitor uses the monitor with the mouse (and keyboard for the hearing test numbers). Headphones for the hearing
+          test go into the <b>laptop</b>; earphones for VR go into the <b>phone</b>.
         </p>
         <ol class="small-note">
           <li>Connect the monitor to the laptop (HDMI). In Windows press <b>⊞ Win + P</b> → <b>Extend</b>.</li>
-          <li>Click <b>Open monitor page</b>, then on that page click <b>Show full screen on the monitor</b>
-            (allow "window management" if Chrome asks). Or drag the window onto the monitor and press <b>F11</b>.</li>
+          <li>Click <b>Open visitor screen</b>, then on that window click <b>⛶ Full screen on the monitor</b> (bottom left;
+            allow "window management" if Chrome asks). Or drag the window onto the monitor and press <b>F11</b>.</li>
         </ol>
         <div class="btn-row">
-          <button class="btn small" id="openDisplay" type="button">🖥 Open monitor page</button>
-          <span class="small-note" id="dispStatus"></span>
+          <button class="btn small" id="openVisitor" type="button">🖥 Open visitor screen</button>
         </div>
-        <h3>How long the picture shows before "Put on the VR headset"</h3>
+        <h3>How long the picture and text show before "Put on the VR headset"</h3>
         <div class="dur-grid"><div class="dur" id="picTime"><span>Picture time</span><div class="pm">
           <button type="button" id="picMinus">−</button><output id="picSec"></output><button type="button" id="picPlus">+</button>
         </div></div></div>
         <h3>Pictures for each condition</h3>
         <p class="small-note">JPG / PNG / WEBP, landscape (best 1920 × 1080). "All languages" is used when a language has no picture of its own.
-          Without any picture a text card with the condition's explanation is shown.</p>
+          Without a picture only the text is shown. "▶ Show on monitor" opens that condition on the visitor screen to check it.</p>
         <table class="voice-table">
           <thead><tr><th>Condition</th><th>English</th><th>தமிழ்</th><th>සිංහල</th><th>All languages</th></tr></thead>
           <tbody id="imageTable"></tbody>
         </table>
+      </div>
+
+      <div class="card">
+        <h2>Headset calibration (fit the picture to the VR box)</h2>
+        <p class="small-note">Put the phone in the VR box, tick the test pattern, look through the box and move the sliders until the
+          two red crosses join into one and the grid lines look straight. Changes go to the phone at once and are saved.</p>
+        <div class="cal-grid" id="calFields"></div>
+        <label class="calib-toggle"><input type="checkbox" id="calTest" /> Show test pattern on the phone (grid, red cross, amber ring)</label>
+        <div class="btn-row"><button class="btn ghost small" id="calReset" type="button">Reset to defaults</button></div>
       </div>
 
       <div class="card">
@@ -183,7 +219,7 @@
         <div class="btn-row">
           <button class="btn ghost small" id="regenDigits" type="button">Make generated digits again</button>
           <a class="btn ghost small" href="/ear/record">Open recording helper</a>
-          <a class="btn ghost small" href="/ear" target="_blank">Open tablet page</a>
+          <a class="btn ghost small" href="/ear" target="_blank">Open visitor screen</a>
           <a class="btn ghost small" href="/vr" target="_blank">Open VR page</a>
         </div>
       </div>
@@ -192,12 +228,12 @@
         <h2>Calibrate with normal listeners</h2>
         <p class="small-note">
           The result bands depend on your digit recordings, headphones and room. Let <b>10–20 people with normal hearing</b>
-          (e.g. classmates who score well on a proper hearing test) do the test <b>in each language</b>, with the same tablet and headphones.
+          (e.g. classmates who score well on a proper hearing test) do the test <b>in each language</b>, with the same laptop, monitor and headphones.
           Their results are not counted as visitors. The suggestion is: <b>GOOD</b> up to their average + 2 × SD, <b>REFER</b> above that + 3 dB.
         </p>
         <label class="calib-toggle">
           <input type="checkbox" id="calibMode" />
-          <span><b>Calibration mode</b> – every new test on the tablet is saved as a normal listener (the tablet also shows the dB value)</span>
+          <span><b>Calibration mode</b> – every new hearing test is saved as a normal listener (the visitor screen also shows the dB value)</span>
         </label>
         <p class="warning-box hidden" id="calibModeWarn">⚠ Calibration mode is ON – remember to switch it OFF before visitors arrive.</p>
         <p class="small-note">You can also tick <i>Normal listener</i> next to any result in the table below.</p>

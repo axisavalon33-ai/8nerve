@@ -228,6 +228,13 @@
       <!-- VR: choose condition -->
       <section class="screen panel" id="s-vrChoose">
         <div class="vr-choose">
+          <div class="card after-banner hidden" id="afterBanner">
+            <button class="banner-close" id="bannerClose" type="button" aria-label="close">✕</button>
+            <h2 class="take-off" data-i18n="vr.takeOff"></h2>
+            <p class="lead" data-i18n="vr.sitMoment"></p>
+            <h3 data-i18n="vr.doctorHeading"></h3>
+            <p id="bannerDoctor"></p>
+          </div>
           <h2 data-i18n="vr.choose"></h2>
           <div class="cond-grid">
             <button class="cond c-bppv" data-cond="bppv" type="button"><span class="cond-ico">↻</span><span data-i18n="vr.bppv.name"></span></button>
@@ -239,74 +246,45 @@
         </div>
       </section>
 
-      <!-- VR: explanation + START -->
+      <!-- VR: read about the condition (picture + text, for the picture time), then "put on the headset" -->
       <section class="screen panel" id="s-vrIntro">
-        <div class="card ack">
+        <div class="card ack read" id="vrRead">
           <h2 id="vrIntroName"></h2>
+          <img id="vrPic" class="read-pic hidden" alt="" />
           <p class="lead" id="vrIntroText"></p>
+          <div class="progress"><div id="readBar"></div></div>
+          <div class="row"><button class="btn ghost" data-go="vrChoose" type="button"><span data-i18n="nav.back"></span></button></div>
+        </div>
+        <div class="card ack wear hidden" id="vrWear">
+          <svg class="wear-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round">
+            <path d="M8 22h48a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H42l-6-7h-8l-6 7H8a4 4 0 0 1-4-4V26a4 4 0 0 1 4-4z" fill="currentColor" fill-opacity=".15" />
+            <circle cx="20" cy="33" r="5" />
+            <circle cx="44" cy="33" r="5" />
+            <path d="M20 22l4-8h16l4 8" />
+          </svg>
+          <h2 data-i18n="display.wear"></h2>
+          <h3 class="wear-name" id="vrWearName"></h3>
+          <p class="lead" data-i18n="vr.waitHelper"></p>
+          <p class="warning" data-i18n="vr.discomfort"></p>
           <p class="strength"></p>
-          <p class="warning hidden" id="vrPhoneMissing" data-i18n="vr.phoneMissing"></p>
-          <div class="row">
-            <button class="btn ghost" data-go="vrChoose" type="button"><span data-i18n="nav.back"></span></button>
-            <button class="btn violet start-btn" id="vrStart" type="button"><span data-i18n="vr.start"></span></button>
-          </div>
+          <div class="row"><button class="btn ghost" data-go="vrChoose" type="button"><span data-i18n="nav.back"></span></button></div>
         </div>
       </section>
 
-      <!-- VR: running -->
+      <!-- VR: running (started by the helper on the host page) -->
       <section class="screen panel" id="s-vrRunning">
         <div class="card ack">
           <h2 id="vrRunName"></h2>
           <p class="lead hint" id="vrRunHint"></p>
           <p class="strength"></p>
           <div class="progress"><div id="vrProgress"></div></div>
-          <p class="note" data-i18n="vr.running"></p>
-        </div>
-      </section>
-
-      <!-- VR: after -->
-      <section class="screen panel" id="s-vrAfter">
-        <div class="card ack after">
-          <p class="note hidden" id="vrStoppedNote" data-i18n="vr.stopped"></p>
-          <h2 class="take-off" data-i18n="vr.takeOff"></h2>
-          <p class="lead" data-i18n="vr.sitMoment"></p>
-          <div class="explain">
-            <h3 data-i18n="vr.whatHeading"></h3>
-            <p id="vrWhat"></p>
-            <h3 data-i18n="vr.doctorHeading"></h3>
-            <p id="vrDoctor"></p>
-          </div>
-          <div class="row">
-            <button class="btn ghost" data-go="vrChoose" type="button"><span data-i18n="vr.tryAnother"></span></button>
-            <button class="btn" data-go="menu" type="button"><span data-i18n="nav.menu"></span></button>
-          </div>
+          <p class="warning big-warning" data-i18n="vr.discomfort"></p>
         </div>
       </section>
     </main>
 
-    <!-- Hidden headset calibration: press and hold the top-right corner for 3 seconds (staff only) -->
-    <div id="calHotspot" aria-hidden="true"></div>
-    <div id="calPanel" class="hidden">
-      <div class="card cal-card">
-        <div class="cal-head">
-          <h2>Headset calibration</h2>
-          <span class="cal-phone" id="calPhone"></span>
-        </div>
-        <p class="cal-note">Changes are sent to the VR phone at once and saved on the laptop.</p>
-        <div class="cal-grid" id="calFields"></div>
-        <label class="cal-test"><input type="checkbox" id="calTest" /> Show test pattern on the phone (grid, red cross, amber ring)</label>
-        <div class="row">
-          <button class="btn ghost small" id="calReset" type="button">Reset to defaults</button>
-          <button class="btn small" id="calClose" type="button">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Always visible while VR is active -->
-    <button class="btn danger hidden" id="stopBtn" type="button">
-      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
-      <span data-i18n="vr.stop"></span>
-    </button>
+    <!-- Laptop + monitor: put this page full screen on the monitor (hidden when full screen) -->
+    <button id="monitorFs" class="monitor-fs" type="button">⛶ Full screen on the monitor</button>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/shared/i18n.js"></script>

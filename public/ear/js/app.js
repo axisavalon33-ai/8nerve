@@ -20,10 +20,11 @@
   const socket = io({ auth: { role: 'tablet' } });
 
   // Screens where the idle timer is longer (visitor is doing the test) or switched off (VR running).
-  const TEST_SCREENS = ['volume', 'instructions', 'test', 'practiceDone', 'loading'];
+  // vrIntro is included: the visitor may be putting on the headset, waiting for the helper to press START.
+  const TEST_SCREENS = ['volume', 'instructions', 'test', 'practiceDone', 'loading', 'vrIntro'];
   const NO_IDLE_SCREENS = ['vrRunning'];
-  const PANEL_SCREENS = ['ackHearing', 'loading', 'missing', 'volume', 'instructions', 'practiceDone', 'test', 'result', 'ackVr', 'vrChoose', 'vrIntro', 'vrRunning', 'vrAfter'];
-  const VR_SCREENS = ['vrIntro', 'vrRunning', 'vrAfter'];
+  const PANEL_SCREENS = ['ackHearing', 'loading', 'missing', 'volume', 'instructions', 'practiceDone', 'test', 'result', 'ackVr', 'vrChoose', 'vrIntro', 'vrRunning'];
+  const VR_SCREENS = ['vrIntro', 'vrRunning'];
 
   // ---------------- screens ----------------
   function show(name) {
@@ -35,7 +36,6 @@
     document.body.classList.toggle('panel-mode', PANEL_SCREENS.includes(name));
     document.body.classList.toggle('no-nav', name === 'home' || name === 'vrRunning' || name === 'test');
     if (name === 'home') resetVisitor();
-    updateStopButton();
     sendTabletStatus();
     touch();
   }
@@ -55,6 +55,8 @@
     $('#contHearing').disabled = true;
     $('#contVr').disabled = true;
     state.vrCondition = null;
+    state.consent = false;
+    $('#afterBanner').classList.add('hidden');
     $('#langPopup').classList.add('hidden');
     audio.setVolume(0.5);
     $('#volSlider').value = 50;
@@ -66,6 +68,8 @@
       screen: state.screen,
       lang: state.screen === 'home' ? null : state.lang,
       condition: VR_SCREENS.includes(state.screen) ? state.vrCondition : null,
+      consent: !!state.consent,
+      stage: state.screen === 'vrIntro' ? readStage() : null,
     });
   }
 
@@ -294,26 +298,61 @@
   });
 
   // ---------------- VR ----------------
-  $('#contVr').addEventListener('click', () => show('vrChoose'));
-  $$('[data-cond]').forEach((b) =>
-    b.addEventListener('click', () => {
-      state.vrCondition = b.dataset.cond;
-      fillVrTexts();
-      show('vrIntro');
-      updatePhoneReady();
-    }),
-  );
+  // Visitor: consent -> choose a condition -> read about it (picture time) -> put on the headset.
+  // The helper starts and stops the experience on the host page.
+  $('#contVr').addEventListener('click', () => {
+    state.consent = true;
+    show('vrChoose');
+  });
+  $$('[data-cond]').forEach((b) => b.addEventListener('click', () => chooseCondition(b.dataset.cond)));
+  $('#bannerClose').addEventListener('click', () => $('#afterBanner').classList.add('hidden'));
+
+  let images = {};
+  let readStart = 0;
+  function chooseCondition(c) {
+    state.vrCondition = c;
+    $('#afterBanner').classList.add('hidden');
+    fillVrTexts();
+    readStart = Date.now();
+    $('#vrRead').classList.remove('hidden');
+    $('#vrWear').classList.add('hidden');
+    $('#readBar').style.width = '0%';
+    if (state.screen === 'vrIntro') sendTabletStatus();
+    else show('vrIntro');
+  }
+  function readStage() {
+    return $('#vrWear').classList.contains('hidden') ? 'read' : 'wear';
+  }
+  function pictureSeconds() {
+    return (state.config && state.config.display && state.config.display.imageSeconds) || 15;
+  }
+  // After the picture time: "Put on the VR headset".
+  setInterval(() => {
+    if (state.screen !== 'vrIntro' || readStage() !== 'read') return;
+    const el = (Date.now() - readStart) / 1000;
+    $('#readBar').style.width = Math.min(100, (el / pictureSeconds()) * 100) + '%';
+    if (el >= pictureSeconds()) {
+      $('#vrRead').classList.add('hidden');
+      $('#vrWear').classList.remove('hidden');
+      sendTabletStatus();
+    }
+  }, 200);
 
   function fillVrTexts() {
     const c = state.vrCondition;
     if (!c) return;
     $('#vrIntroName').textContent = I18n.t(`vr.${c}.name`);
     $('#vrIntroText').textContent = I18n.t(`vr.${c}.intro`);
+    $('#vrWearName').textContent = I18n.t(`vr.${c}.name`);
     $('#vrRunName').textContent = I18n.t(`vr.${c}.name`);
     const hint = c === 'bppv' ? 'vr.tiltHint' : c === 'oscillopsia' ? 'vr.moveHint' : null;
     $('#vrRunHint').textContent = hint ? I18n.t(hint) : '';
-    $('#vrWhat').textContent = I18n.t(`vr.${c}.what`);
-    $('#vrDoctor').textContent = I18n.t(`vr.${c}.doctor`);
+    $('#bannerDoctor').textContent = I18n.t(`vr.${c}.doctor`);
+    // Picture for this condition in the visitor's language (or for all languages)
+    const set = images[c] || {};
+    const url = set[state.lang] || set.all;
+    $('#vrPic').classList.toggle('hidden', !url);
+    if (url) $('#vrPic').src = url;
     showStrength();
   }
 
@@ -327,52 +366,36 @@
     });
   }
 
-  function phoneReady() {
-    const vr = state.status.vr || {};
-    return vr.connected > 0 && !!vr.ready;
-  }
-  function updatePhoneReady() {
-    const ready = phoneReady();
-    $('#vrPhoneMissing').classList.toggle('hidden', ready);
-    $('#vrStart').disabled = !ready;
-  }
+  // The helper chose a condition on the host page (optionally also the language, for checking pictures).
+  socket.on('visitor:select', (msg) => {
+    if (msg.lang && msg.lang !== state.lang) setLang(msg.lang);
+    if (state.screen === 'home') I18n.apply();
+    chooseCondition(msg.condition);
+  });
 
-  $('#vrStart').addEventListener('click', () => {
-    if (!phoneReady()) return;
+  // The helper pressed START on the host page.
+  function startedVr(condition) {
+    if (condition && condition !== state.vrCondition) {
+      state.vrCondition = condition;
+      fillVrTexts();
+    }
     state.vrActive = true;
-    state.vrStoppedByStop = false;
-    state.vrStartedAt = Date.now();
-    socket.emit('vr:start', { condition: state.vrCondition, lang: state.lang });
     $('#vrProgress').style.width = '0%';
     show('vrRunning');
-  });
+  }
+  socket.on('vr:started', (msg) => startedVr(msg && msg.condition));
 
-  $('#stopBtn').addEventListener('click', () => {
-    socket.emit('vr:stop', { lang: state.lang });
-    endVr(true);
-  });
-
-  function endVr(byStop) {
-    const wasActive = state.vrActive;
+  // Finished or stopped: back to the condition menu with "take the headset off slowly".
+  function endVr() {
+    const wasActive = state.vrActive || state.screen === 'vrRunning';
     state.vrActive = false;
-    if (byStop) state.vrStoppedByStop = true;
-    $('#vrStoppedNote').classList.toggle('hidden', !state.vrStoppedByStop);
-    if (wasActive || state.screen === 'vrRunning') show('vrAfter');
-    updateStopButton();
+    if (!wasActive) return;
+    $('#afterBanner').classList.remove('hidden');
+    show('vrChoose');
+    touch();
   }
-
-  socket.on('vr:ended', () => endVr(false));
-  socket.on('vr:stopped', () => {
-    if (state.vrActive) endVr(true);
-  });
-
-  function updateStopButton() {
-    const vrState = (state.status.vr || {}).state;
-    const phoneBusy = vrState === 'running' || vrState === 'waiting';
-    const visible = state.vrActive || phoneBusy || state.screen === 'vrRunning';
-    $('#stopBtn').classList.toggle('hidden', !visible);
-    document.body.classList.toggle('stop-visible', visible);
-  }
+  socket.on('vr:ended', endVr);
+  socket.on('vr:stopped', endVr);
 
   // Progress bar while running (from the phone's reports).
   function updateVrProgress() {
@@ -392,84 +415,49 @@
   socket.on('digits', (m) => (state.manifest = m));
   socket.on('status', (s) => {
     state.status = s;
-    updatePhoneReady();
-    updateStopButton();
+    // Safety net: if the phone is running but this screen missed the start message
+    const vrState = (s.vr || {}).state;
+    if ((vrState === 'running' || vrState === 'waiting') && state.screen === 'vrIntro') startedVr(s.vr.condition);
     updateVrProgress();
+  });
+  socket.on('images', (m) => {
+    images = m;
+    fillVrTexts();
   });
   socket.on('connect', sendTabletStatus);
 
-  // ---------------- hidden headset calibration ----------------
-  // Press and hold the top-right corner for 3 s. Values go live to the phone over Socket.IO.
-  const CAL_FIELDS = [
-    ['distortion', 'Distortion', 0, 1, 0.01],
-    ['zoom', 'Zoom', 0.4, 2.5, 0.01],
-    ['ipd', 'Distance between eye centres', 0.3, 0.7, 0.005],
-    ['vertical', 'Vertical position', -0.25, 0.25, 0.005],
-    ['eyeSize', 'Eye circle size', 0.4, 1.3, 0.01],
-    ['roundness', 'Roundness', 0, 1, 0.01],
-    ['noseWidth', 'Nose cutout width', 0, 0.4, 0.005],
-    ['noseHeight', 'Nose cutout height', 0, 0.6, 0.005],
-    ['divider', 'Divider width', 0, 0.06, 0.001],
-    ['pictureSize', 'Picture size in screen mode', 0.8, 2.2, 0.01],
-  ];
-  const calInputs = {};
-  for (const [key, label, min, max, step] of CAL_FIELDS) {
-    const wrap = document.createElement('div');
-    wrap.className = 'cal-field';
-    wrap.innerHTML = `<label><span></span><output></output></label><input type="range" min="${min}" max="${max}" step="${step}" />`;
-    wrap.querySelector('span').textContent = label;
-    const input = wrap.querySelector('input');
-    const out = wrap.querySelector('output');
-    input.addEventListener('input', () => {
-      out.textContent = Number(input.value).toFixed(3).replace(/\.?0+$/, '');
-      queueCal();
-    });
-    calInputs[key] = { input, out };
-    $('#calFields').appendChild(wrap);
-  }
-  function fillCal(cal) {
-    if (!cal) return;
-    for (const [key] of CAL_FIELDS) {
-      const { input, out } = calInputs[key];
-      input.value = cal[key];
-      out.textContent = Number(cal[key]).toFixed(3).replace(/\.?0+$/, '');
-    }
-  }
-  let calTimer = null;
-  function queueCal() {
-    // at most ~10 updates per second while a slider is dragged
-    if (calTimer) return;
-    calTimer = setTimeout(() => {
-      calTimer = null;
-      const cal = {};
-      for (const [key] of CAL_FIELDS) cal[key] = Number(calInputs[key].input.value);
-      socket.emit('vr:cal', { cal, testPattern: $('#calTest').checked });
-    }, 100);
-  }
-  $('#calTest').addEventListener('change', () => socket.emit('vr:cal', { testPattern: $('#calTest').checked }));
-  $('#calReset').addEventListener('click', () => socket.emit('vr:cal', { reset: true, testPattern: $('#calTest').checked }));
-  $('#calClose').addEventListener('click', () => {
-    $('#calPanel').classList.add('hidden');
-    $('#calTest').checked = false;
-    socket.emit('vr:cal', { testPattern: false });
-  });
-  socket.on('vr:cal', (msg) => fillCal(msg.cal));
-
-  function openCal() {
-    fillCal(state.config && state.config.vrCal);
-    const vr = state.status.vr || {};
-    $('#calPhone').textContent = vr.connected ? (vr.ready ? `Phone ready${vr.camRes ? ' · ' + vr.camRes : ''}` : 'Phone connected, not started') : 'Phone not connected';
-    $('#calPanel').classList.remove('hidden');
-  }
-  let holdTimer = null;
-  const hot = $('#calHotspot');
-  hot.addEventListener('pointerdown', (e) => {
+  // ---------------- keyboard for the number pad ----------------
+  document.addEventListener('keydown', (e) => {
+    if (state.screen !== 'test') return;
+    const k = /^[0-9]$/.test(e.key) ? e.key : e.key === 'Backspace' ? 'del' : e.key === 'Enter' ? 'ok' : null;
+    if (!k) return;
     e.preventDefault();
-    clearTimeout(holdTimer);
-    holdTimer = setTimeout(openCal, 3000);
+    const b = $(`#keypad [data-k="${k}"]`);
+    if (b && !b.disabled) b.click();
   });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => hot.addEventListener(ev, () => clearTimeout(holdTimer)));
-  hot.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // ---------------- full screen on the external monitor ----------------
+  // Chrome/Edge can open the page full screen on the second screen directly (asks for "window management" once).
+  $('#monitorFs').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    let target;
+    try {
+      if ('getScreenDetails' in window) {
+        const details = await window.getScreenDetails();
+        target = details.screens.find((sc) => !sc.isPrimary) || details.currentScreen;
+      }
+    } catch {
+      /* permission refused – use the screen this window is on */
+    }
+    try {
+      await document.documentElement.requestFullscreen(target ? { screen: target, navigationUI: 'hide' } : { navigationUI: 'hide' });
+    } catch {
+      alert('Full screen did not work: drag this window onto the monitor and press F11.');
+    }
+  });
+  document.addEventListener('fullscreenchange', () => document.body.classList.toggle('is-fullscreen', !!document.fullscreenElement));
+  // Touch tablets use the automatic full screen instead.
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) $('#monitorFs').classList.add('hidden');
 
   // ---------------- start ----------------
   function wait(ms) {
@@ -483,6 +471,7 @@
     const [cfg, manifest] = await Promise.all([fetch('/api/config').then((r) => r.json()), fetch('/api/ear/digits').then((r) => r.json())]);
     state.config = state.config || cfg;
     state.manifest = manifest;
+    images = await fetch('/api/vr/images').then((r) => r.json());
     I18n.lang = 'en';
     I18n.apply();
     show('home');
@@ -492,6 +481,6 @@
   }
 
   // Exposed for automated tests only.
-  window.__ear = { state, audio, show, openCal };
+  window.__ear = { state, audio, show };
   init();
 })();

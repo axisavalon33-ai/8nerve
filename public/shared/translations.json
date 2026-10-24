@@ -285,6 +285,18 @@
     "si": "කරුණාකර වාඩි වන්න. පැළඳීමට උදව්කරු උදව් කරයි.",
     "needsReview": true
   },
+  "vr.waitHelper": {
+    "en": "Stay seated. The helper will start the experience.",
+    "ta": "அமர்ந்தே இருங்கள். உதவியாளர் அனுபவத்தைத் தொடங்குவார்.",
+    "si": "වාඩි වී සිටින්න. උදව්කරු අත්දැකීම ආරම්භ කරයි.",
+    "needsReview": true
+  },
+  "vr.discomfort": {
+    "en": "If you feel any discomfort, close your eyes or take off the headset.",
+    "ta": "ஏதேனும் அசௌகரியம் ஏற்பட்டால், கண்களை மூடுங்கள் அல்லது கண்ணாடியைக் கழற்றுங்கள்.",
+    "si": "කිසියම් අපහසුවක් දැනුණොත්, ඇස් වසා ගන්න හෝ කණ්ණාඩිය ගලවන්න.",
+    "needsReview": true
+  },
   "vr.start": { "en": "START", "ta": "START", "si": "START" },
   "vr.stop": { "en": "STOP", "ta": "STOP", "si": "STOP" },
   "vr.phoneMissing": {

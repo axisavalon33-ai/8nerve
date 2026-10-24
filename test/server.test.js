@@ -304,8 +304,8 @@ test('calibrate with normal listeners: mode, marking, statistics, suggested and 
   assert.equal((await json('/api/host/results', { headers: PIN })).body.calibration.ta.n, 0);
 });
 
-test('monitor display: follows the tablet, pictures per condition/language, picture time setting, preview', async () => {
-  assert.equal((await fetch(base + '/ear/display')).status, 200);
+test('no tablet: host chooses the condition for the visitor screen, START uses the visitor language, pictures + picture time', async () => {
+  assert.equal((await fetch(base + '/ear/display')).status, 404, 'separate monitor page removed – the visitor app runs on the monitor');
   // picture time: 3–120 s, default 15
   assert.equal((await json('/api/config')).body.display.imageSeconds, 15);
   const put = (body) => json('/api/host/settings', { method: 'PUT', headers: { ...PIN, 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -319,32 +319,46 @@ test('monitor display: follows the tablet, pictures per condition/language, pict
   assert.match(imgs.menieres.ta, /^\/media\/vr\/images\/menieres\/ta\.png\?v=/);
   imgs = (await json('/api/vr/images/menieres/all?ext=jpg', { method: 'PUT', headers: PIN, body: 'JPGfake' })).body;
   assert.match(imgs.menieres.all, /all\.jpg/);
-  assert.equal(imgs.bppv.en, null);
-  assert.equal((await fetch(base + imgs.menieres.ta)).status, 200);
+  assert.equal((await fetch(base + imgs.menieres.all)).status, 200);
   imgs = (await json('/api/vr/images/menieres/ta', { method: 'DELETE', headers: PIN })).body;
   assert.equal(imgs.menieres.ta, null);
 
-  // the monitor gets the tablet's screen, language and chosen condition
   const connect = (auth) =>
     new Promise((resolve) => {
       const s = ioClient(base, { auth, transports: ['websocket'] });
       s.on('connect', () => resolve(s));
     });
-  const display = await connect({ role: 'display' });
-  const tablet = await connect({ role: 'tablet' });
+  const visitor = await connect({ role: 'tablet' }); // the visitor app on the monitor
+  const phone = await connect({ role: 'vr' });
   const host = await connect({ role: 'host', pin: '2468' });
   try {
-    const seen = new Promise((r) => display.on('status', (st) => st.tablet.condition === 'menieres' && r(st)));
-    tablet.emit('tablet:status', { screen: 'vrIntro', lang: 'si', condition: 'menieres' });
+    // host chooses a condition -> visitor screen
+    const sel = new Promise((r) => visitor.once('visitor:select', r));
+    host.emit('visitor:select', { condition: 'oscillopsia' });
+    assert.deepEqual(await sel, { condition: 'oscillopsia' });
+
+    // visitor screen reports consent + stage -> host sees it
+    const seen = new Promise((r) => host.on('status', (st) => st.tablet.stage === 'wear' && r(st)));
+    visitor.emit('tablet:status', { screen: 'vrIntro', lang: 'si', condition: 'oscillopsia', consent: true, stage: 'wear' });
     const st = await seen;
-    assert.equal(st.tablet.lang, 'si');
-    assert.equal(st.tablet.screen, 'vrIntro');
-    assert.ok(st.display.connected >= 1, 'host page can see the monitor is open');
-    const prev = new Promise((r) => display.once('display:preview', r));
-    host.emit('display:preview', { condition: 'bppv', lang: 'ta' });
-    assert.deepEqual(await prev, { condition: 'bppv', lang: 'ta' });
+    assert.equal(st.tablet.consent, true);
+    assert.equal(st.tablet.condition, 'oscillopsia');
+
+    // host presses START without a language -> the visitor's language is used; visitor screen is told
+    const started = new Promise((r) => phone.once('vr:start', r));
+    const told = new Promise((r) => visitor.once('vr:started', r));
+    host.emit('vr:start', { condition: 'oscillopsia' });
+    assert.equal((await started).lang, 'si');
+    assert.deepEqual(await told, { condition: 'oscillopsia', lang: 'si' });
+
+    // host STOP reaches the phone and the visitor screen
+    const stopped = new Promise((r) => phone.once('vr:stop', r));
+    const back = new Promise((r) => visitor.once('vr:stopped', r));
+    host.emit('vr:stop', {});
+    await stopped;
+    await back;
   } finally {
-    for (const c of [display, tablet, host]) c.close();
+    for (const c of [visitor, phone, host]) c.close();
   }
   await put({ display: { imageSeconds: 15 } });
 });

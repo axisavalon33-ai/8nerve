@@ -40,7 +40,9 @@
       imageFiles = m;
       renderImages();
     });
-    $('#openDisplay').addEventListener('click', () => window.open('/ear/display', 'earDisplay', 'popup,width=1280,height=720'));
+    $('#openVisitor').addEventListener('click', () => window.open('/ear', 'earVisitor', 'popup,width=1280,height=800'));
+    setupVrControl();
+    setupCalibration();
     $('#picMinus').addEventListener('click', () => changePicTime(-5));
     $('#picPlus').addEventListener('click', () => changePicTime(5));
     fetch('/api/ear/digits/status').then((r) => r.json()).then(renderDigitAudio);
@@ -180,6 +182,7 @@
   }
   function renderLive(pub) {
     live = JSON.parse(JSON.stringify(pub));
+    fillCal(pub.vrCal);
     currentBands = pub.bands;
     renderCalibration();
     $('#calibMode').checked = !!pub.calibrationMode;
@@ -243,6 +246,113 @@
     $('#sensorWarning').classList.toggle('hidden', !warn);
   }
 
+  // ---------- VR control: choose condition, START, STOP ----------
+  const SCREEN_NAMES = {
+    home: 'Home (language choice)',
+    menu: 'Menu',
+    ackHearing: 'Hearing test – consent',
+    ackVr: 'VR – consent',
+    vrChoose: 'VR – choosing a condition',
+    vrIntro: 'VR – reading about the condition',
+    vrRunning: 'VR – experience running',
+  };
+  let lastStatus = null;
+  function setupVrControl() {
+    const wrap = $('#vcConds');
+    for (const c of CONDS) {
+      const b = button(COND_NAMES[c], () => hostSocket && hostSocket.emit('visitor:select', { condition: c }), '');
+      b.dataset.cond = c;
+      wrap.append(b);
+    }
+    $('#vcStart').addEventListener('click', () => {
+      const tab = (lastStatus && lastStatus.tablet) || {};
+      if (!tab.condition || !hostSocket) return;
+      hostSocket.emit('vr:start', { condition: tab.condition, lang: tab.lang });
+    });
+    $('#vcStop').addEventListener('click', () => hostSocket && hostSocket.emit('vr:stop', {}));
+    // Esc = STOP (safety shortcut), unless typing in a field
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName) && hostSocket) hostSocket.emit('vr:stop', {});
+    });
+  }
+  function renderVrControl(s) {
+    lastStatus = s;
+    const tab = s.tablet || {};
+    const vr = s.vr || {};
+    const running = vr.state === 'running' || vr.state === 'waiting';
+    let screen = SCREEN_NAMES[tab.screen] || tab.screen || '–';
+    if (tab.screen === 'vrIntro') screen = tab.stage === 'wear' ? 'VR – "Put on the VR headset" ✓ ready to start' : 'VR – reading about the condition (picture time)';
+    $('#vcScreen').textContent = tab.connected ? screen : 'Not open – click "Open visitor screen" below';
+    $('#vcLang').textContent = LANG_NAMES[tab.lang] || '–';
+    $('#vcConsent').textContent = tab.consent ? 'Given ✓' : 'Not yet';
+    $('#vcCond').textContent = COND_NAMES[tab.condition] || (running ? COND_NAMES[vr.condition] : '–') || '–';
+    $('#vcPhone').textContent = !vr.connected ? 'Not connected' : !vr.ready ? 'Connected – tap "Tap to start VR" on the phone' : running ? `Running (${vr.state})` : 'Ready ✓';
+    document.querySelectorAll('#vcConds button').forEach((b) => b.classList.toggle('chosen', b.dataset.cond === tab.condition));
+    let hint = '';
+    if (running) hint = vr.state === 'waiting' ? 'BPPV: waiting for the visitor to tilt the head to the right…' : 'Experience running – press STOP (or Esc) at any sign of discomfort.';
+    else if (!tab.condition) hint = 'Waiting for a condition to be chosen (on the monitor, or with the buttons above).';
+    else if (!vr.connected || !vr.ready) hint = 'The VR phone is not ready.';
+    else if (!tab.consent) hint = '⚠ The visitor has not ticked the consent box on the monitor yet.';
+    else if (tab.stage !== 'wear') hint = 'The visitor is still reading – you can start when they have the headset on.';
+    else hint = 'Ready: visitor seated with headset and headphones on → press START.';
+    $('#vcHint').textContent = hint;
+    $('#vcStart').disabled = running || !tab.condition || !vr.connected || !vr.ready;
+    $('#vcProgress').style.width = running && vr.duration ? Math.min(100, (vr.elapsed / vr.duration) * 100) + '%' : '0%';
+  }
+
+  // ---------- headset calibration (moved here from the tablet) ----------
+  const CAL_FIELDS = [
+    ['distortion', 'Distortion', 0, 1, 0.01],
+    ['zoom', 'Zoom', 0.4, 2.5, 0.01],
+    ['ipd', 'Distance between eye centres', 0.3, 0.7, 0.005],
+    ['vertical', 'Vertical position', -0.25, 0.25, 0.005],
+    ['eyeSize', 'Eye circle size', 0.4, 1.3, 0.01],
+    ['roundness', 'Roundness', 0, 1, 0.01],
+    ['noseWidth', 'Nose cutout width', 0, 0.4, 0.005],
+    ['noseHeight', 'Nose cutout height', 0, 0.6, 0.005],
+    ['divider', 'Divider width', 0, 0.06, 0.001],
+    ['pictureSize', 'Picture size in screen mode', 0.8, 2.2, 0.01],
+  ];
+  const calInputs = {};
+  const fmt3 = (v) => Number(v).toFixed(3).replace(/\.?0+$/, '');
+  function setupCalibration() {
+    for (const [key, label, min, max, step] of CAL_FIELDS) {
+      const wrap = el('div', 'cal-field');
+      const lab = el('label');
+      lab.append(el('span', '', label), el('output'));
+      const input = el('input');
+      Object.assign(input, { type: 'range', min, max, step });
+      input.addEventListener('input', () => {
+        lab.querySelector('output').textContent = fmt3(input.value);
+        queueCal();
+      });
+      wrap.append(lab, input);
+      calInputs[key] = { input, out: lab.querySelector('output') };
+      $('#calFields').append(wrap);
+    }
+    $('#calTest').addEventListener('change', () => hostSocket.emit('vr:cal', { testPattern: $('#calTest').checked }));
+    $('#calReset').addEventListener('click', () => hostSocket.emit('vr:cal', { reset: true, testPattern: $('#calTest').checked }));
+    hostSocket.on('vr:cal', (msg) => fillCal(msg.cal));
+  }
+  function fillCal(cal) {
+    if (!cal) return;
+    for (const [key] of CAL_FIELDS) {
+      if (document.activeElement === calInputs[key].input) continue;
+      calInputs[key].input.value = cal[key];
+      calInputs[key].out.textContent = fmt3(cal[key]);
+    }
+  }
+  let calTimer = null;
+  function queueCal() {
+    if (calTimer) return; // at most ~10 updates per second while dragging
+    calTimer = setTimeout(() => {
+      calTimer = null;
+      const cal = {};
+      for (const [key] of CAL_FIELDS) cal[key] = Number(calInputs[key].input.value);
+      hostSocket.emit('vr:cal', { cal, testPattern: $('#calTest').checked });
+    }, 100);
+  }
+
   // ---------- monitor display ----------
   let imageFiles = {};
   async function loadImages() {
@@ -295,7 +405,7 @@
               'mini danger',
             ),
           );
-        td.append(button('▶ Show on monitor', () => hostSocket && hostSocket.emit('display:preview', { condition: c, lang: key === 'all' ? 'en' : key })));
+        td.append(button('▶ Show on monitor', () => hostSocket && hostSocket.emit('visitor:select', { condition: c, lang: key === 'all' ? undefined : key })));
         tr.append(td);
       }
       tbody.append(tr);
@@ -459,9 +569,7 @@
     $('#tabConn').textContent = tab.connected ? `Yes (${tab.connected})` : 'No';
     $('#tabScreen').textContent = (tab.screen || '–') + ago(tab.at);
     $('#tabLang').textContent = LANG_NAMES[tab.lang] || '–';
-    const disp = s.display || {};
-    $('#dispDot').className = 'dot' + (disp.connected ? ' on' : '');
-    $('#dispStatus').textContent = disp.connected ? 'Monitor page is open ✓' : 'Monitor page is not open';
+    renderVrControl(s);
 
     $('#vrDot').className = 'dot' + (vr.connected ? (vr.ready ? ' on' : ' warn') : '');
     $('#vrConn').textContent = vr.connected ? `Yes (${vr.connected})` : 'No';
@@ -501,7 +609,6 @@
       return;
     }
     main.append(
-      qrBox('Tablet', best.urls.tablet, best.qr.tablet, 'big'),
       qrBox('VR phone', best.urls.vr, best.qr.vr, 'big'),
       qrBox('Record digits', best.urls.record, best.qr.record, 'small'),
     );
@@ -514,7 +621,7 @@
       title.textContent = `${a.ip} – ${a.adapter}${a.likely ? '' : ' (probably a virtual adapter)'}`;
       const row = document.createElement('div');
       row.className = 'qr-row';
-      row.append(qrBox('Tablet', a.urls.tablet, a.qr.tablet, 'small'), qrBox('VR phone', a.urls.vr, a.qr.vr, 'small'));
+      row.append(qrBox('VR phone', a.urls.vr, a.qr.vr, 'small'));
       other.append(title, row);
     }
   }

@@ -37,7 +37,6 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   app.get(['/ear/record', '/ear/record/'], page('ear/record.html'));
   app.get(['/ear/host', '/ear/host/'], page('ear/host.html'));
   app.get(['/vr', '/vr/'], page('vr/index.html'));
-  app.get(['/ear/display', '/ear/display/'], page('ear/display.html'));
   app.use(express.static(path.join(ROOT, 'public'), { index: false, maxAge: 0 }));
   app.use('/media', express.static(mediaDir, { maxAge: 0 }));
   // Three.js comes from node_modules (installed once with npm install) – no internet needed later.
@@ -222,13 +221,11 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   const status = {
     tablet: { connected: 0, screen: null, lang: null, at: null },
     vr: { connected: 0, at: null },
-    display: { connected: 0, at: null },
   };
   let testPattern = false; // calibration test pattern on the phone (not saved)
   const broadcastStatus = () => {
     io.to('host').emit('status', status);
     io.to('tablet').emit('status', status);
-    io.to('display').emit('status', status);
   };
 
   function attach(httpServer) {
@@ -240,15 +237,11 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
         socket.disconnect(true);
         return;
       }
-      if (!['tablet', 'vr', 'host', 'display'].includes(role)) {
+      if (!['tablet', 'vr', 'host'].includes(role)) {
         socket.disconnect(true);
         return;
       }
       socket.join(role);
-      if (role === 'display') {
-        status.display.connected++;
-        status.display.at = Date.now();
-      }
       if (role === 'tablet' || role === 'vr') {
         status[role].connected++;
         status[role].at = Date.now();
@@ -267,6 +260,8 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
         status.tablet.screen = String(s.screen || '').slice(0, 40);
         status.tablet.lang = LANGS.includes(s.lang) ? s.lang : null;
         status.tablet.condition = CONDITIONS.includes(s.condition) ? s.condition : null;
+        status.tablet.consent = !!s.consent;
+        status.tablet.stage = ['read', 'wear'].includes(s.stage) ? s.stage : null;
         status.tablet.at = Date.now();
         broadcastStatus();
       });
@@ -284,7 +279,8 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
         const condition = msg && msg.condition;
         if (!CONDITIONS.includes(condition)) return;
         const s = settings.get();
-        const lang = LANGS.includes(msg.lang) ? msg.lang : 'en';
+        // From the host page: use the language the visitor chose on the monitor.
+        const lang = LANGS.includes(msg.lang) ? msg.lang : status.tablet.lang || 'en';
         io.to('vr').emit('vr:start', {
           condition,
           lang,
@@ -294,6 +290,13 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
           // my uploaded spoken instruction, or null -> the phone speaks the text with text-to-speech
           voiceUrl: findAudio(mediaDir, path.join('vr', 'voice', condition), lang),
         });
+        io.to('tablet').emit('vr:started', { condition, lang });
+      });
+
+      // Host page: choose a condition for the visitor (the visitor screen then shows its picture and text).
+      socket.on('visitor:select', (msg) => {
+        if (role !== 'host' || !msg || !CONDITIONS.includes(msg.condition)) return;
+        io.to('tablet').emit('visitor:select', { condition: msg.condition, lang: LANGS.includes(msg.lang) ? msg.lang : undefined });
       });
 
       // Host page checks: play a Ménière's sound for a few seconds, or say a condition's instruction.
@@ -334,14 +337,7 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
         io.to('tablet').emit('vr:ended', { condition: msg && msg.condition, reason: msg && msg.reason });
       });
 
-      // Host page: show a condition's picture on the monitor now (to check an uploaded picture).
-      socket.on('display:preview', (msg) => {
-        if (role !== 'host' || !msg || !CONDITIONS.includes(msg.condition) || !LANGS.includes(msg.lang)) return;
-        io.to('display').emit('display:preview', { condition: msg.condition, lang: msg.lang });
-      });
-
       socket.on('disconnect', () => {
-        if (role === 'display') status.display.connected = Math.max(0, status.display.connected - 1);
         if (role === 'tablet' || role === 'vr') {
           status[role].connected = Math.max(0, status[role].connected - 1);
           status[role].at = Date.now();

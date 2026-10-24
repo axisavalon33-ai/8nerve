@@ -34,16 +34,15 @@ async function printWelcome(protocol, port) {
   console.log(' Ear & Balance is running');
   console.log('==============================================');
   console.log(`\n Host page (this laptop): ${hostUrl}`);
-  console.log(' It opens by itself. It shows QR codes for the tablet and the VR phone.');
-  console.log(` Monitor display (external screen): ${protocol}://localhost:${port}/ear/display\n`);
+  console.log(' It opens by itself. Click "Open visitor screen" there to show the visitor app on the monitor.');
+  console.log(` Visitor screen (monitor): ${protocol}://localhost:${port}/ear\n`);
   if (best) {
-    const tabletUrl = `${protocol}://${best.ip}:${port}/ear`;
-    console.log(` Tablet: scan this QR code, or type ${tabletUrl}`);
-    console.log(await QRCode.toString(tabletUrl, { type: 'terminal', small: true }));
-    console.log(` VR phone:  ${protocol}://${best.ip}:${port}/vr`);
+    const vrUrl = `${protocol}://${best.ip}:${port}/vr`;
+    console.log(` VR phone: scan this QR code, or type ${vrUrl}`);
+    console.log(await QRCode.toString(vrUrl, { type: 'terminal', small: true }));
     if (addrs.length > 1) {
-      console.log('\n If that does not open on the tablet, try another address of this laptop:');
-      for (const a of addrs.slice(1)) console.log(`   ${protocol}://${a.ip}:${port}/ear   (${a.name})`);
+      console.log('\n If that does not open on the phone, try another address of this laptop:');
+      for (const a of addrs.slice(1)) console.log(`   ${protocol}://${a.ip}:${port}/vr   (${a.name})`);
     }
   } else {
     console.log(' ! This laptop is not connected to any network. Connect it to the Wi-Fi and restart.');
