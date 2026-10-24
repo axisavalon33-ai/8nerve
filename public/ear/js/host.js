@@ -97,12 +97,14 @@
     b.addEventListener('click', onClick);
     return b;
   };
-  // "Upload MP3" button: a hidden file input inside a label.
-  const fileButton = (text, onFile) => {
+  // "Upload" button: a hidden file input inside a label. `accept` decides which files the picker lists.
+  const AUDIO_ACCEPT = 'audio/*,.mp3,.m4a,.wav,.ogg';
+  const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif';
+  const fileButton = (text, onFile, accept = AUDIO_ACCEPT) => {
     const l = el('label', 'mini file-btn', text);
     const input = el('input');
     input.type = 'file';
-    input.accept = 'audio/*,.mp3,.m4a,.wav,.ogg';
+    input.accept = accept;
     input.addEventListener('change', () => input.files[0] && onFile(input.files[0]).finally(() => (input.value = '')));
     l.appendChild(input);
     return l;
@@ -423,9 +425,9 @@
               imageFiles = await Staff.api(`/api/vr/images/${c}/${key}?ext=${encodeURIComponent(ext)}`, { method: 'PUT', body: file });
               renderImages();
             } catch (e) {
-              alert('Could not upload: ' + e.message);
+              alert('Could not upload: ' + e.message + '\nUse a JPG, PNG, WEBP or GIF picture.');
             }
-          }),
+          }, IMAGE_ACCEPT),
         );
         if (url)
           td.append(
