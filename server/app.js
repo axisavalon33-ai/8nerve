@@ -8,7 +8,7 @@ const { Server } = require('socket.io');
 const { SettingsStore, CONDITIONS, CAL_DEFAULTS, bandFor, bandsFor } = require('./settings');
 const { ResultsStore } = require('./results');
 const { lanAddresses } = require('./network');
-const { LANGS, AUDIO_EXTS, IMAGE_EXTS, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus, imageStatus } = require('./media');
+const { LANGS, AUDIO_EXTS, IMAGE_EXTS, VIDEO_EXTS, homeVideo, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus, imageStatus } = require('./media');
 const { generateDigits, findEspeak } = require('./digit-tts');
 const ROOT = path.join(__dirname, '..');
 
@@ -49,6 +49,7 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   app.get('/api/ear/digits/status', async (req, res) => res.json({ status: digitStatus(mediaDir), espeak: !!(await findEspeak()), generating }));
   app.get('/api/vr/voice', (req, res) => res.json(voiceStatus(mediaDir, CONDITIONS)));
   app.get('/api/vr/images', (req, res) => res.json(imageStatus(mediaDir, CONDITIONS)));
+  app.get('/api/ear/video', (req, res) => res.json({ url: homeVideo(mediaDir) }));
 
   app.post('/api/ear/results', express.json({ limit: '10kb' }), (req, res) => {
     const { lang, srt } = req.body || {};
@@ -150,6 +151,24 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
     imagesChanged();
     res.json(imageStatus(mediaDir, CONDITIONS));
   });
+  // Looping background video of the visitor screen (MP4 or WEBM).
+  const videoChanged = () => io && io.emit('video', { url: homeVideo(mediaDir) });
+  app.put('/api/ear/video', requirePin, express.raw({ type: () => true, limit: '500mb' }), (req, res) => {
+    const ext = String(req.query.ext || 'mp4').toLowerCase();
+    if (!VIDEO_EXTS.includes(ext)) return res.status(400).json({ error: 'Use an MP4 (H.264) or WEBM video' });
+    if (!req.body || !req.body.length) return res.status(400).json({ error: 'Empty file' });
+    fs.mkdirSync(path.join(mediaDir, 'ear'), { recursive: true });
+    removeAudio(mediaDir, 'ear', 'home', VIDEO_EXTS);
+    fs.writeFileSync(path.join(mediaDir, 'ear', `home.${ext}`), req.body);
+    videoChanged();
+    res.json({ url: homeVideo(mediaDir) });
+  });
+  app.delete('/api/ear/video', requirePin, (req, res) => {
+    removeAudio(mediaDir, 'ear', 'home', VIDEO_EXTS);
+    videoChanged();
+    res.json({ url: null });
+  });
+
   app.delete('/api/vr/images/:cond/:lang', requirePin, (req, res) => {
     const { cond, lang } = req.params;
     if (!CONDITIONS.includes(cond) || ![...LANGS, 'all'].includes(lang)) return res.status(400).json({ error: 'Bad condition or language' });

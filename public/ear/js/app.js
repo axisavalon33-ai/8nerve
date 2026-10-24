@@ -420,6 +420,21 @@
     if ((vrState === 'running' || vrState === 'waiting') && state.screen === 'vrIntro') startedVr(s.vr.condition);
     updateVrProgress();
   });
+  // Looping background video (uploaded on the host page). Without one, the soft colour background shows.
+  function setVideo(url) {
+    const v = $('#bgVideo');
+    if (!url) {
+      v.removeAttribute('src');
+      v.style.display = 'none';
+      return;
+    }
+    if (v.dataset.url === url) return;
+    v.dataset.url = url;
+    v.src = url;
+    v.style.display = '';
+    v.play().catch(() => {});
+  }
+  socket.on('video', (m) => setVideo(m.url));
   socket.on('images', (m) => {
     images = m;
     fillVrTexts();
@@ -477,7 +492,7 @@
     show('home');
     // Missing background video -> keep the animated gradient.
     $('#bgVideo').addEventListener('error', () => ($('#bgVideo').style.display = 'none'));
-    $('#bgVideo').play().catch(() => {});
+    setVideo((await fetch('/api/ear/video').then((r) => r.json())).url);
   }
 
   // Exposed for automated tests only.

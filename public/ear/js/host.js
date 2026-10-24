@@ -36,6 +36,25 @@
     Staff.api('/api/host/links').then(renderLinks);
     I18n.load().then(loadVoices);
     loadImages();
+    fetch('/api/ear/video').then((r) => r.json()).then(renderVideo);
+    socket.on('video', renderVideo);
+    $('#homeVideoFile').addEventListener('change', async () => {
+      const file = $('#homeVideoFile').files[0];
+      if (!file) return;
+      const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
+      $('#homeVideoInfo').textContent = `Uploading ${file.name} (${Math.round(file.size / 1e6)} MB)…`;
+      try {
+        renderVideo(await Staff.api('/api/ear/video?ext=' + encodeURIComponent(ext), { method: 'PUT', body: file }));
+      } catch (e) {
+        alert('Could not upload: ' + e.message);
+        fetch('/api/ear/video').then((r) => r.json()).then(renderVideo);
+      }
+      $('#homeVideoFile').value = '';
+    });
+    $('#homeVideoRemove').addEventListener('click', async () => {
+      if (!confirm('Remove the home screen video?')) return;
+      renderVideo(await Staff.api('/api/ear/video', { method: 'DELETE' }));
+    });
     socket.on('images', (m) => {
       imageFiles = m;
       renderImages();
@@ -351,6 +370,20 @@
       for (const [key] of CAL_FIELDS) cal[key] = Number(calInputs[key].input.value);
       hostSocket.emit('vr:cal', { cal, testPattern: $('#calTest').checked });
     }, 100);
+  }
+
+  function renderVideo(v) {
+    const pv = $('#homeVideoPreview');
+    const has = !!(v && v.url);
+    pv.classList.toggle('hidden', !has);
+    $('#homeVideoRemove').classList.toggle('hidden', !has);
+    $('#homeVideoInfo').textContent = has ? 'Playing on the visitor screen ✓' : 'No video yet – the soft colour background is shown.';
+    if (has && pv.dataset.url !== v.url) {
+      pv.dataset.url = v.url;
+      pv.src = v.url;
+      pv.play().catch(() => {});
+    }
+    if (!has) pv.removeAttribute('src');
   }
 
   // ---------- monitor display ----------

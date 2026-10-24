@@ -362,3 +362,25 @@ test('no tablet: host chooses the condition for the visitor screen, START uses t
   }
   await put({ display: { imageSeconds: 15 } });
 });
+
+test('home screen video: upload (PIN), shown to the visitor screen, remove', async () => {
+  assert.deepEqual((await json('/api/ear/video')).body, { url: null });
+  assert.equal((await fetch(`${base}/api/ear/video?ext=mp4`, { method: 'PUT', body: 'x' })).status, 401);
+  assert.equal((await fetch(`${base}/api/ear/video?ext=avi`, { method: 'PUT', headers: PIN, body: 'x' })).status, 400);
+  const visitor = ioClient(base, { auth: { role: 'tablet' }, transports: ['websocket'] });
+  try {
+    await new Promise((r) => visitor.on('connect', r));
+    const told = new Promise((r) => visitor.once('video', r));
+    const up = (await json('/api/ear/video?ext=webm', { method: 'PUT', headers: PIN, body: 'WEBMfake' })).body;
+    assert.match(up.url, /^\/media\/ear\/home\.webm\?v=\d+$/);
+    assert.equal((await told).url, up.url);
+    assert.equal((await fetch(base + up.url)).status, 200);
+    // a new upload in another format replaces the old one
+    const up2 = (await json('/api/ear/video?ext=mp4', { method: 'PUT', headers: PIN, body: 'MP4fake' })).body;
+    assert.match(up2.url, /home\.mp4/);
+    assert.ok(!fs.existsSync(path.join(mediaDir, 'ear', 'home.webm')));
+    assert.deepEqual((await json('/api/ear/video', { method: 'DELETE', headers: PIN })).body, { url: null });
+  } finally {
+    visitor.close();
+  }
+});

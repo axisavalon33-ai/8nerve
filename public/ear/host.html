@@ -158,6 +158,18 @@
         <div class="btn-row">
           <button class="btn small" id="openVisitor" type="button">🖥 Open visitor screen</button>
         </div>
+        <h3>Looping video behind the language buttons (home screen)</h3>
+        <div class="video-row">
+          <video id="homeVideoPreview" muted loop playsinline class="video-preview hidden"></video>
+          <div>
+            <p class="small-note" id="homeVideoInfo">No video yet – the soft colour background is shown.</p>
+            <label class="mini file-btn">⬆ Upload video (MP4 / WEBM)<input type="file" id="homeVideoFile" accept="video/mp4,video/webm,.mp4,.webm" /></label>
+            <button class="mini danger hidden" id="homeVideoRemove" type="button">✕ Remove video</button>
+            <p class="small-note">Landscape, silent, a few seconds to a few minutes; it loops and plays muted. MP4 (H.264) works everywhere.
+              It also stays (dimmed) behind the menu and the other screens.</p>
+          </div>
+        </div>
+
         <h3>How long the picture and text show before "Put on the VR headset"</h3>
         <div class="dur-grid"><div class="dur" id="picTime"><span>Picture time</span><div class="pm">
           <button type="button" id="picMinus">−</button><output id="picSec"></output><button type="button" id="picPlus">+</button>

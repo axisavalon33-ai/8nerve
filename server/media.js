@@ -9,6 +9,12 @@ const path = require('path');
 const LANGS = ['en', 'ta', 'si'];
 const AUDIO_EXTS = ['mp3', 'wav', 'webm', 'ogg', 'm4a']; // first one found is used
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+const VIDEO_EXTS = ['mp4', 'webm'];
+
+// Looping background video of the visitor screen: media/ear/home.mp4 (or .webm), or null.
+function homeVideo(mediaDir) {
+  return findAudio(mediaDir, 'ear', 'home', VIDEO_EXTS);
+}
 
 // URL of dir/base.<ext> (first existing extension), with ?v= so browsers never show an old cached copy.
 function findAudio(mediaDir, relDir, base, exts = AUDIO_EXTS) {
@@ -77,4 +83,4 @@ function imageStatus(mediaDir, conditions) {
   return out;
 }
 
-module.exports = { LANGS, AUDIO_EXTS, IMAGE_EXTS, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus, imageStatus };
+module.exports = { LANGS, AUDIO_EXTS, IMAGE_EXTS, VIDEO_EXTS, homeVideo, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus, imageStatus };

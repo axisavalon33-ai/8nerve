@@ -101,7 +101,8 @@ for START; never while VR is running).
 - **Status:** visitor screen and VR phone (camera, sensors, fullscreen, effect strength, frames per second).
 - **VR experience – live controls:** effect strength (Low / Medium / High, 10–100 %), length of each condition (10–60 s,
   default 30 s), Ménière's ringing and muffled-sound volumes with **Test sound**, oscillopsia sensitivity.
-- **Visitor screen on the monitor:** open it, *picture time* (5–120 s, default 15 s), **pictures for each condition** per language
+- **Visitor screen on the monitor:** open it, **looping home video** (upload MP4/WEBM – plays muted behind the language
+  buttons and dimmed behind the other screens), *picture time* (5–120 s, default 15 s), **pictures for each condition** per language
   or for all languages (JPG/PNG/WEBP, best 1920 × 1080), **▶ Show on monitor** to check one.
 - **Headset calibration** and **Head movement** (live sensor values, warnings).
 - **Spoken instructions (VR):** text per condition/language, ▶ on phone, upload your own MP3 (needed where the phone has no
@@ -115,7 +116,7 @@ for START; never while VR is running).
 - **Settings:** common result bands, idle timeouts, ramp-up, BPPV options, test details, PIN.
 
 Saved data: `data/` (settings, results, certificate). Media: `media/` (recordings, generated digits, pictures, voice MP3s,
-optional `media/ear/home.mp4` background video). Neither is on GitHub.
+home video `media/ear/home.mp4`, uploaded on the host page). Neither is on GitHub.
 
 ---
 
@@ -145,7 +146,7 @@ before the end. Default strength **Low**. Hard limits: spin ≤ 90°/s, rotation
 ```
 npm test
 ```
-39 automatic tests: hearing-test rules, staircase, SRT, bands, loudness, noise, trimming/normalising, WAV, espeak-ng digits,
+40 automatic tests: hearing-test rules, staircase, SRT, bands, loudness, noise, trimming/normalising, WAV, espeak-ng digits,
 digit sets never mixed, nystagmus, BPPV, spinning (speed limit, ends upright), 10–60 s lengths, oscillopsia bounce, head-tilt
 maths, server API and PIN, results, normal-listener calibration and per-language bands, settings limits, uploads, headset
 calibration, QR addresses, host START/STOP and condition choice reaching the phone and the visitor screen, translations.
