@@ -50,9 +50,9 @@
       </div>
 
       <div class="card connect">
-        <h2>Connect the VR phone</h2>
+        <h2>Connect the hearing tablet(s) and the VR phone</h2>
         <p class="small-note">
-          On the phone: open the <b>Camera</b> app (or Google Lens) and point it at the QR code, then tap the link.
+          On each hearing tablet / the VR phone: open the <b>Camera</b> app (or Google Lens) and point it at the QR code, then tap the link.
           If Chrome says <i>"Your connection is not private"</i>, tap <b>Advanced → Proceed</b> (it is your own laptop).
           The devices must be on the <b>same Wi-Fi</b> as this laptop.
         </p>
@@ -64,7 +64,7 @@
         <details>
           <summary>Still not connecting?</summary>
           <ul class="small-note">
-            <li>Check the phone is on the <b>same Wi-Fi</b> as the laptop (not a "guest" network – guest networks block devices from seeing each other).</li>
+            <li>Check the tablets and the phone are on the <b>same Wi-Fi</b> as the laptop (not a "guest" network – guest networks block devices from seeing each other).</li>
             <li><b>Windows Firewall (most common cause):</b> in the project folder, right-click <code>allow-firewall-windows.cmd</code> →
               <i>Run as administrator</i>. Or: Start → type <i>Allow an app through Windows Firewall</i> → <i>Change settings</i> → tick <b>Node.js</b> for <b>Private</b> (and Public) → OK.
               Also set the Wi-Fi to <i>Private network</i> (Settings → Network → Wi-Fi → your network → Private).</li>
@@ -76,7 +76,7 @@
 
       <div class="grid">
         <div class="card">
-          <h2><span class="dot" id="tabDot"></span>Visitor screen (monitor)</h2>
+          <h2><span class="dot" id="tabDot"></span>Hearing tablet(s) (/ear/hearing)</h2>
           <dl class="kv">
             <dt>Connected</dt><dd id="tabConn">–</dd>
             <dt>Screen</dt><dd id="tabScreen">–</dd>
@@ -145,18 +145,18 @@
       </div>
 
       <div class="card">
-        <h2>Visitor screen on the monitor</h2>
+        <h2>VR visitor screen on the monitor (/ear/vr)</h2>
         <p class="small-note">
-          The visitor uses the monitor with the mouse (and keyboard for the hearing test numbers). Headphones for the hearing
-          test go into the <b>laptop</b>; earphones for VR go into the <b>phone</b>.
+          VR visitors use the monitor with the mouse: language → consent → condition → read → "Put on the VR headset". The
+          hearing test runs on the tablets (/ear/hearing, headphones into each tablet). VR earphones go into the <b>phone</b>.
         </p>
         <ol class="small-note">
           <li>Connect the monitor to the laptop (HDMI). In Windows press <b>⊞ Win + P</b> → <b>Extend</b>.</li>
-          <li>Click <b>Open visitor screen</b>, then on that window click <b>⛶ Full screen on the monitor</b> (bottom left;
+          <li>Click <b>Open VR visitor screen</b>, then on that window click <b>⛶ Full screen on the monitor</b> (bottom left;
             allow "window management" if Chrome asks). Or drag the window onto the monitor and press <b>F11</b>.</li>
         </ol>
         <div class="btn-row">
-          <button class="btn small" id="openVisitor" type="button">🖥 Open visitor screen</button>
+          <button class="btn small" id="openVisitor" type="button">🖥 Open VR visitor screen</button>
         </div>
         <h3>Looping video behind the language buttons (home screen)</h3>
         <div class="video-row">
@@ -231,7 +231,7 @@
         <div class="btn-row">
           <button class="btn ghost small" id="regenDigits" type="button">Make generated digits again</button>
           <a class="btn ghost small" href="/ear/record">Open recording helper</a>
-          <a class="btn ghost small" href="/ear" target="_blank">Open visitor screen</a>
+          <a class="btn ghost small" href="/ear/hearing" target="_blank">Open hearing tablet page</a>
           <a class="btn ghost small" href="/vr" target="_blank">Open VR page</a>
         </div>
       </div>
@@ -240,12 +240,12 @@
         <h2>Calibrate with normal listeners</h2>
         <p class="small-note">
           The result bands depend on your digit recordings, headphones and room. Let <b>10–20 people with normal hearing</b>
-          (e.g. classmates who score well on a proper hearing test) do the test <b>in each language</b>, with the same laptop, monitor and headphones.
+          (e.g. classmates who score well on a proper hearing test) do the test <b>in each language</b>, with the same tablet and headphones.
           Their results are not counted as visitors. The suggestion is: <b>GOOD</b> up to their average + 2 × SD, <b>REFER</b> above that + 3 dB.
         </p>
         <label class="calib-toggle">
           <input type="checkbox" id="calibMode" />
-          <span><b>Calibration mode</b> – every new hearing test is saved as a normal listener (the visitor screen also shows the dB value)</span>
+          <span><b>Calibration mode</b> – every new hearing test is saved as a normal listener (the tablet also shows the dB value)</span>
         </label>
         <p class="warning-box hidden" id="calibModeWarn">⚠ Calibration mode is ON – remember to switch it OFF before visitors arrive.</p>
         <p class="small-note">You can also tick <i>Normal listener</i> next to any result in the table below.</p>
