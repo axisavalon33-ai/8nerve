@@ -648,3 +648,16 @@ h3 {
   border-radius: 14px;
   background: #0b1b33;
 }
+
+/* hearing test file for the tablet */
+.hf-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.hf-row ol {
+  flex: 1;
+  min-width: 280px;
+  line-height: 1.5;
+}

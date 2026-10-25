@@ -4,15 +4,18 @@ An offline exhibition station about hearing and balance.
 
 | Device | Page | Who uses it |
 |---|---|---|
-| **Tablet(s)** + headphones (one or more) | `/ear/hearing` | **Hearing test** visitors: language → consent → hearing-in-noise test (no VR here) |
+| **Tablet(s)** + headphones (one or more) | the file `hearing-test.html` | **Hearing test** visitors: language → consent → hearing-in-noise test. **Works alone** – no laptop, no Wi-Fi |
 | **Monitor** connected to the laptop, with a **mouse** | `/ear/vr` – the *VR visitor screen* | **VR** visitors: language → consent → choose a condition → read about it → "Put on the VR headset" (no hearing test here) |
 | **Laptop screen** | `/ear/host` (PIN) – the *host page* | **You**: **START / STOP** the VR, choose a condition for the visitor, settings, results, uploads, calibration |
 | **Android phone in a VR box** + earphones | `/vr` | Shows the camera picture with the balance-disorder effects |
 | (optional) | `/ear/record` (PIN) | Record the digits 0–9 for each language |
 
-Everything runs from **one laptop** with Node.js. No internet is needed once it is installed. The phone must be on the same
-Wi-Fi as the laptop (a pocket router or a hotspot is fine). Headphones for the **hearing test** go into each **tablet**;
-earphones for **VR** go into the **phone**. (`/ear` shows both parts on one screen, if you ever need that.)
+The **balance VR** runs from **one laptop** with Node.js. No internet is needed once it is installed. The phone must be on the same
+Wi-Fi as the laptop (a pocket router or a hotspot is fine). Earphones for **VR** go into the **phone**.
+
+The **hearing test** is separate: the laptop makes **one file** (`hearing-test.html`) with everything inside it – digits, texts,
+fonts, result bands. Put it on the tablet once; then the tablet runs the test **on its own** and keeps the results.
+Headphones for the hearing test go into the **tablet**.
 
 > ⚠️ Screening **simulation** for awareness only – not a medical test. Result bands and texts marked `needsReview` must be
 > checked before the exhibition (see "Before the exhibition").
@@ -46,10 +49,26 @@ npm start
 - The black window must stay open. **Ctrl + C** stops the station.
 - If espeak-ng is installed, the first start says *"Made 30 placeholder digit recordings"*.
 
-## 3. Hearing tablet(s)
+## 3. Hearing tablet(s) – works alone
 
-On each tablet: host page → *Connect …* → scan the **Hearing tablet** QR code → *Advanced → Proceed*. The page goes full screen
-on the first tap. Plug headphones into the tablet and set its volume to a fixed comfortable level.
+**Put the hearing test on the tablet (once, and again after changing digits, bands or settings):**
+1. Laptop: `npm start` → host page → card **Hearing test on the tablet**.
+2. Tablet on the same Wi-Fi as the laptop (only for this download) → scan the QR code with the camera → open in **Chrome**
+   (*Advanced → Proceed*) → the file `hearing-test.html` downloads.
+   *Or:* click **⬇ Download hearing-test file** on the laptop and copy the file to the tablet's *Download* folder (USB cable).
+3. Open it: Chrome **⋮ → Downloads → hearing-test.html**. Bookmark it (☆) or *⋮ → Add to home screen*.
+   If Chrome does not open it from the *Files* app, type `file:///sdcard/Download/hearing-test.html` in Chrome's address bar.
+4. From now on the tablet needs **no laptop and no Wi-Fi**. Plug headphones into the tablet and set its volume to a fixed
+   comfortable level. The page goes full screen on the first tap.
+
+**Staff panel on the tablet:** on the start screen hold the **top-right corner for 3 seconds** → PIN → results (counts, last
+results with dB), **⬇ Download results (CSV)**, *Delete all results*, **Calibration mode**, suggested bands → *Use for …*.
+If it shows *"This browser does not let the file keep results"*, open the file in Chrome as in step 3.
+
+**Results to the laptop (optional):** staff panel → *Download results (CSV)* → copy the file to the laptop → host page →
+*Hearing results* → **⬆ Import results from a tablet (CSV)**. Importing the same file twice adds nothing.
+
+A new file keeps the results already on the tablet (same browser, same file name and place).
 
 ## 3b. VR visitor screen on the monitor
 
@@ -78,7 +97,8 @@ crosses join into **one** cross (*Distance between eye centres*, *Vertical posit
 
 ### Hearing test (on a tablet)
 Visitor: language → tick the box → **Continue** → set a comfortable volume → **Continue** → 2 practice + 24 test rounds: hear
-3 numbers in noise, tap them on the big keypad (a keyboard also works) → coloured result. You see the dB value on the host page.
+3 numbers in noise, tap them on the big keypad (a keyboard also works) → coloured result. You see the dB value in the tablet's
+staff panel.
 
 ### VR (visitor on the monitor, you on the host page)
 1. Visitor sits on the chair. On the monitor: language → reads the warning list, **ticks consent**
@@ -101,8 +121,9 @@ for START; never while VR is running).
 
 ## 6. Host page – overview
 - **VR control:** visitor screen / language / consent / condition / phone state, condition buttons, **START**, **STOP** (Esc), progress.
-- **Connect:** QR codes for the hearing tablet(s) and the VR phone (+ other laptop addresses and connection tips).
-- **Status:** hearing tablet(s) and VR phone (camera, sensors, fullscreen, effect strength, frames per second).
+- **Connect:** QR code for the VR phone (+ other laptop addresses and connection tips).
+- **Hearing test on the tablet:** QR code / button to download `hearing-test.html` (warning if a language has no digits).
+- **Status:** VR phone (camera, sensors, fullscreen, effect strength, frames per second).
 - **VR experience – live controls:** effect strength (Low / Medium / High, 10–100 %), length of each condition (10–60 s,
   default 30 s), Ménière's ringing and muffled-sound volumes with **Test sound**, oscillopsia sensitivity.
 - **Visitor screen on the monitor:** open it, **looping home video** (upload MP4/WEBM – plays muted behind the language
@@ -114,9 +135,10 @@ for START; never while VR is running).
 - **Digit audio:** per language and digit: Play, source (Generated / My recording), *Replace with recording*, *Upload MP3*,
   *Reset to generated*; warning if a language is incomplete. A language uses **your recordings only when all 10 exist**,
   otherwise the generated set – never mixed.
-- **Calibrate with normal listeners:** *Calibration mode* (or tick *Normal listener* on a result); per language average, SD and
-  **suggested bands** (GOOD ≤ average + 2 SD, REFER > that + 3 dB) → *Use for …*. Switch calibration mode OFF before visitors.
-- **Hearing results:** counts, last results with dB, CSV download, reset.
+- **Calibrate with normal listeners:** calibration mode is switched on the **tablet** (staff panel). Here: per language average,
+  SD and **suggested bands** (GOOD ≤ average + 2 SD, REFER > that + 3 dB) from the imported results → *Use for …* → download a
+  new hearing-test file. (The tablet's staff panel can also use its suggestion directly.)
+- **Hearing results:** imported from the tablets – counts, last results with dB, CSV download, reset.
 - **Settings:** common result bands, idle timeouts, ramp-up, BPPV options, test details, PIN.
 
 Saved data: `data/` (settings, results, certificate). Media: `media/` (recordings, generated digits, pictures, voice MP3s,
@@ -159,11 +181,12 @@ Quick laptop-only test: `npm run dev`, then <http://localhost:8080/ear/hearing>,
 
 ## Before the exhibition – please check
 - [ ] **Record the digits** for every language you will use (host page → *Digit audio*).
-- [ ] **Calibrate the bands** with 10–20 normal-hearing people per language (host page → *Calibrate with normal listeners*) and
+- [ ] **Calibrate the bands** with 10–20 normal-hearing people per language (tablet staff panel → *Calibration mode*) and
       confirm with your ENT / audiology lecturer.
+- [ ] After the last change of digits / bands / settings: **download the hearing-test file again** onto every tablet.
 - [ ] Texts marked `"needsReview": true` in `public/shared/translations.json` checked by a native speaker / lecturer.
 - [ ] Change the PIN. Fit the headset (calibration). Try every condition yourself at Low strength.
-- [ ] Calibration mode **OFF**.
+- [ ] Calibration mode **OFF** on every tablet.
 
 ## Project layout
 ```
@@ -178,7 +201,8 @@ test/              automatic tests (npm test)
 ## Troubleshooting
 | Problem | Fix |
 |---|---|
-| Tablet / phone cannot open the page | Same Wi-Fi (not a guest network)? Run `allow-firewall-windows.cmd` as administrator. Try the other addresses on the host page. |
+| Tablet: results not kept / staff panel warns | Open the file in **Chrome** (⋮ → Downloads, or `file:///sdcard/Download/hearing-test.html`), not in a file viewer. |
+| Phone cannot open the page | Same Wi-Fi (not a guest network)? Run `allow-firewall-windows.cmd` as administrator. Try the other addresses on the host page. |
 | "Not private" warning | Normal: *Advanced → Proceed*. It returns if the laptop's IP address changed. |
 | START is greyed out | Host page hint says why: no condition chosen yet, or the VR phone is not ready (tap *Tap to start VR*). |
 | VR visitor screen is on the laptop, not the monitor | Win + P → Extend; then *⛶ Full screen on the monitor*, or drag the window and press F11. |

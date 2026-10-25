@@ -4,6 +4,11 @@
     data: {},
     lang: 'en',
     async load() {
+      // The tablet's own hearing-test file carries the texts inside it.
+      if (global.EAR_STANDALONE) {
+        this.data = global.EAR_STANDALONE.translations;
+        return;
+      }
       const res = await fetch('/shared/translations.json', { cache: 'no-cache' });
       this.data = await res.json();
     },

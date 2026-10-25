@@ -5,22 +5,8 @@ const path = require('path');
 const crypto = require('crypto');
 
 const LANGS = ['en', 'ta', 'si'];
-
-function stats(values) {
-  const n = values.length;
-  if (!n) return { n: 0 };
-  const mean = values.reduce((a, b) => a + b, 0) / n;
-  const sd = n > 1 ? Math.sqrt(values.reduce((a, v) => a + (v - mean) ** 2, 0) / (n - 1)) : 0;
-  return { n, mean: round1(mean), sd: round1(sd), min: Math.min(...values), max: Math.max(...values) };
-}
-const round1 = (x) => Math.round(x * 10) / 10;
-
-// Suggested bands from normal listeners: GOOD up to mean + 2 SD (rounded up to 0.5 dB), REFER above GOOD + 3 dB.
-function suggestBands(st) {
-  if (!st || st.n < 5) return null;
-  const good = Math.ceil((st.mean + 2 * Math.max(st.sd, 0.5)) * 2) / 2;
-  return { good, refer: good + 3 };
-}
+const BANDS = ['good', 'borderline', 'refer'];
+const { stats, suggestBands } = require('../public/ear/js/din.js'); // shared with the tablet's own hearing-test file
 
 class ResultsStore {
   constructor(dataDir) {
@@ -39,6 +25,33 @@ class ResultsStore {
     this.items.push(entry);
     this.save();
     return entry;
+  }
+  // Results copied from a tablet that runs the hearing test on its own (its CSV file).
+  // An id already here is skipped, so importing the same file twice adds nothing.
+  importMany(list) {
+    const known = new Set(this.items.map((r) => r.id));
+    let added = 0;
+    let skipped = 0;
+    for (const r of Array.isArray(list) ? list : []) {
+      const srt = Number(r && r.srt);
+      const time = new Date(r && r.time);
+      const ok = r && LANGS.includes(r.lang) && BANDS.includes(r.band) && Number.isFinite(srt) && Math.abs(srt) <= 40 && !isNaN(time);
+      const id = ok && typeof r.id === 'string' && /^[\w-]{6,64}$/.test(r.id) ? r.id : null;
+      if (!ok || !id || known.has(id)) {
+        skipped++;
+        continue;
+      }
+      const entry = { id, time: time.toISOString(), lang: r.lang, srt: Math.round(srt * 10) / 10, band: r.band };
+      if (r.calib) entry.calib = true;
+      this.items.push(entry);
+      known.add(id);
+      added++;
+    }
+    if (added) {
+      this.items.sort((a, b) => String(a.time).localeCompare(String(b.time)));
+      this.save();
+    }
+    return { added, skipped };
   }
   setCalib(id, calib) {
     const r = this.items.find((x) => x.id === id);
@@ -82,8 +95,8 @@ class ResultsStore {
     return { counts, recent: this.items.slice(-40).reverse(), calibration };
   }
   csv() {
-    const rows = ['time,lang,srt_db,band,normal_listener'];
-    for (const r of this.items) rows.push([r.time, r.lang, r.srt, r.band, r.calib ? 'yes' : ''].join(','));
+    const rows = ['time,lang,srt_db,band,normal_listener,id'];
+    for (const r of this.items) rows.push([r.time, r.lang, r.srt, r.band, r.calib ? 'yes' : '', r.id].join(','));
     return rows.join('\n') + '\n';
   }
 }
