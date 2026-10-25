@@ -81,22 +81,5 @@
     return Math.min(0.97, Math.max(0.03, p));
   }
 
-  // Normal-listener calibration: mean / SD of their SRTs ...
-  function stats(values) {
-    const n = values.length;
-    if (!n) return { n: 0 };
-    const mean = values.reduce((a, b) => a + b, 0) / n;
-    const sd = n > 1 ? Math.sqrt(values.reduce((a, v) => a + (v - mean) ** 2, 0) / (n - 1)) : 0;
-    return { n, mean: round1(mean), sd: round1(sd), min: Math.min(...values), max: Math.max(...values) };
-  }
-  const round1 = (x) => Math.round(x * 10) / 10;
-
-  // ... and the suggested bands: GOOD up to mean + 2 SD (rounded up to 0.5 dB), REFER above GOOD + 3 dB.
-  function suggestBands(st) {
-    if (!st || st.n < 5) return null;
-    const good = Math.ceil((st.mean + 2 * Math.max(st.sd, 0.5)) * 2) / 2;
-    return { good, refer: good + 3 };
-  }
-
-  return { makeTriplet, isCorrect, Staircase, bandsFor, bandFor, levelsFor, gaugePosition, stats, suggestBands };
+  return { makeTriplet, isCorrect, Staircase, bandsFor, bandFor, levelsFor, gaugePosition };
 });

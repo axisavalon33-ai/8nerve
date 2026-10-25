@@ -10,7 +10,6 @@ const { ResultsStore } = require('./results');
 const { lanAddresses } = require('./network');
 const { LANGS, AUDIO_EXTS, IMAGE_EXTS, VIDEO_EXTS, homeVideo, findAudio, removeAudio, digitStatus, digitManifest, voiceStatus, imageStatus } = require('./media');
 const { generateDigits, findEspeak } = require('./digit-tts');
-const { buildHearingFile } = require('./hearing-file');
 const ROOT = path.join(__dirname, '..');
 
 function pinMatches(given, pin) {
@@ -199,9 +198,7 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   });
   // Addresses of this laptop with QR codes, so the tablet and phone can simply scan to connect.
   app.get('/api/host/links', requirePin, async (req, res) => {
-    // hearingFile: the tablet downloads its own hearing-test file once (the PIN is in the link, so keep it on the host page).
-    const pin = encodeURIComponent(settings.get().pin);
-    const pages = { hearingFile: `/api/host/hearing-file?pin=${pin}`, vr: '/vr', record: '/ear/record', host: '/ear/host', monitor: '/ear/vr' };
+    const pages = { tablet: '/ear/hearing', vr: '/vr', record: '/ear/record', host: '/ear/host', monitor: '/ear/vr' };
     const out = [];
     for (const a of lanAddresses()) {
       const base = `${links.protocol}://${a.ip}:${links.port}`;
@@ -216,18 +213,6 @@ function createApp({ dataDir, mediaDir, links = { protocol: 'https', port: 8443 
   });
 
   app.get('/api/host/results', requirePin, (req, res) => res.json(results.summary()));
-  // The hearing test as one file for a tablet that works alone. Opened as a link / QR code, so the PIN may come in the query string.
-  app.get('/api/host/hearing-file', (req, res) => {
-    if (!pinMatches(req.get('x-pin') || req.query.pin, settings.get().pin)) return res.status(401).send('Wrong PIN');
-    res.set('cache-control', 'no-store');
-    res.type('html').attachment('hearing-test.html').send(buildHearingFile({ mediaDir, settings: settings.get() }));
-  });
-  // Results CSV from such a tablet -> added to the results here (the same file twice adds nothing).
-  app.post('/api/host/results/import', requirePin, express.json({ limit: '5mb' }), (req, res) => {
-    const r = results.importMany(req.body && req.body.results);
-    io.to('host').emit('results', results.summary());
-    res.json({ ...r, summary: results.summary() });
-  });
   app.get('/api/host/results.csv', (req, res) => {
     // Opened as a normal link, so the PIN comes in the query string.
     if (!pinMatches(req.query.pin, settings.get().pin)) return res.status(401).send('Wrong PIN');

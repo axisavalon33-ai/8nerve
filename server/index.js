@@ -40,7 +40,7 @@ async function printWelcome(protocol, port) {
     const vrUrl = `${protocol}://${best.ip}:${port}/vr`;
     console.log(` VR phone: scan this QR code, or type ${vrUrl}`);
     console.log(await QRCode.toString(vrUrl, { type: 'terminal', small: true }));
-    console.log(' Hearing tablet: it works on its own – host page → "Hearing test on the tablet" → download the file once.');
+    console.log(` Hearing tablet(s): ${protocol}://${best.ip}:${port}/ear/hearing  (QR code on the host page)`);
     if (addrs.length > 1) {
       console.log('\n If that does not open on the phone, try another address of this laptop:');
       for (const a of addrs.slice(1)) console.log(`   ${protocol}://${a.ip}:${port}/vr   (${a.name})`);

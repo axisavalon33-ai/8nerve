@@ -1,4 +1,4 @@
-// Visitor app (/ear): screens, hearing test flow, VR remote control. Also runs inside the tablet's hearing-test file.
+// Tablet app (/ear): screens, hearing test flow, VR remote control.
 (function () {
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => document.querySelectorAll(sel);
@@ -17,12 +17,10 @@
   };
 
   const audio = new DinAudio();
-  // The hearing-test file for a tablet on its own (made on the host page): no server, everything is inside the file.
-  const STANDALONE = window.EAR_STANDALONE || null;
   // /ear/hearing = tablet with the hearing test only, /ear/vr = monitor with VR only, /ear = both.
-  const MODE = STANDALONE || /\/ear\/hearing\/?$/.test(location.pathname) ? 'hearing' : /\/ear\/vr\/?$/.test(location.pathname) ? 'vr' : 'all';
+  const MODE = /\/ear\/hearing\/?$/.test(location.pathname) ? 'hearing' : /\/ear\/vr\/?$/.test(location.pathname) ? 'vr' : 'all';
   // The hearing tablets must not disturb the VR control: they connect with their own role.
-  const socket = STANDALONE ? { on() {}, emit() {} } : io({ auth: { role: MODE === 'hearing' ? 'tablet' : 'monitor' } });
+  const socket = io({ auth: { role: MODE === 'hearing' ? 'tablet' : 'monitor' } });
 
   // Screens where the idle timer is longer (visitor is doing the test) or switched off (VR running).
   // vrIntro is included: the visitor may be putting on the headset, waiting for the helper to press START.
@@ -269,7 +267,6 @@
     const band = DIN.bandFor(srt, bands);
     $('#calibNote').classList.add('hidden');
     showResult(band, DIN.gaugePosition(srt, bands));
-    if (STANDALONE) return showCalibNote(window.TabletStaff.saveResult({ lang: state.lang, srt, band }), srt);
     try {
       // Saved anonymously: time, language, SRT and band only.
       const res = await fetch('/api/ear/results', {
@@ -277,16 +274,15 @@
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ lang: state.lang, srt }),
       });
-      showCalibNote(await res.json(), srt);
+      const saved = await res.json();
+      // Calibration mode (staff only): show the measured value so the tester can note it.
+      if (saved.calib) {
+        $('#calibNote').textContent = `Calibration test (normal listener) – SRT ${srt.toFixed(1)} dB`;
+        $('#calibNote').classList.remove('hidden');
+      }
     } catch (err) {
       console.warn('Could not save result', err);
     }
-  }
-  // Calibration mode (staff only): show the measured value so the tester can note it.
-  function showCalibNote(saved, srt) {
-    if (!saved || !saved.calib) return;
-    $('#calibNote').textContent = `Calibration test (normal listener) – SRT ${srt.toFixed(1)} dB`;
-    $('#calibNote').classList.remove('hidden');
   }
 
   function showResult(band, pos) {
@@ -487,8 +483,8 @@
     }
   });
   document.addEventListener('fullscreenchange', () => document.body.classList.toggle('is-fullscreen', !!document.fullscreenElement));
-  // Touch tablets (and the tablet's own hearing-test file) use the automatic full screen instead.
-  if (STANDALONE || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)) $('#monitorFs').classList.add('hidden');
+  // Touch tablets use the automatic full screen instead.
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) $('#monitorFs').classList.add('hidden');
 
   // ---------------- start ----------------
   function wait(ms) {
@@ -499,15 +495,6 @@
     await I18n.load();
     // Fullscreen + screen awake from the first tap (the language choice).
     Kiosk.init({ label: () => I18n.t('fullscreen.return') });
-    if (STANDALONE) {
-      state.config = STANDALONE.config;
-      state.manifest = STANDALONE.manifest;
-      $('#bgVideo').style.display = 'none';
-      I18n.lang = 'en';
-      I18n.apply();
-      show('home');
-      return;
-    }
     const [cfg, manifest] = await Promise.all([fetch('/api/config').then((r) => r.json()), fetch('/api/ear/digits').then((r) => r.json())]);
     state.config = state.config || cfg;
     state.manifest = manifest;

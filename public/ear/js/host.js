@@ -20,8 +20,6 @@
     hostSocket = socket;
     $('#hostStop').addEventListener('click', () => socket.emit('vr:stop', {}));
     $('#csvLink').href = '/api/host/results.csv?pin=' + encodeURIComponent(Staff.pin);
-    $('#hfDownload').href = '/api/host/hearing-file?pin=' + encodeURIComponent(Staff.pin);
-    $('#importCsv').addEventListener('change', importCsv);
 
     $('#resetResults').addEventListener('click', async () => {
       if (!confirm('Delete ALL saved hearing results? This cannot be undone.')) return;
@@ -161,6 +159,7 @@
         saveLive({ vr: { intensity: v } });
       }),
     );
+    $('#calibMode').addEventListener('change', () => saveLive({ calibrationMode: $('#calibMode').checked }));
     $('#calibClear').addEventListener('click', async () => {
       if (!confirm('Unmark all normal-listener results? (The results stay, they just count as visitors again.)')) return;
       renderResults(await Staff.api('/api/host/results/calibration', { method: 'DELETE' }));
@@ -207,6 +206,8 @@
     fillCal(pub.vrCal);
     currentBands = pub.bands;
     renderCalibration();
+    $('#calibMode').checked = !!pub.calibrationMode;
+    $('#calibModeWarn').classList.toggle('hidden', !pub.calibrationMode);
     const pct = Math.round((pub.vr.intensity || 0.35) * 100);
     if (document.activeElement !== $('#vrStrength')) $('#vrStrength').value = pct;
     $('#vrStrengthOut').textContent = pct + '%';
@@ -560,10 +561,6 @@
     $('#digitWarning').innerHTML = '';
     warnings.forEach((w) => $('#digitWarning').append(el('div', '', '⚠ ' + w)));
     $('#digitWarning').classList.toggle('hidden', !warnings.length);
-    // The tablet's hearing-test file takes the digits in use now.
-    const none = LANGS.filter((l) => !st[l].source).map((l) => LANG_NAMES[l]);
-    $('#hfWarn').textContent = none.length ? `⚠ No digits yet for ${none.join(', ')} – a file downloaded now cannot test in that language (see "Digit audio").` : '';
-    $('#hfWarn').classList.toggle('hidden', !none.length);
   }
 
   // Uploaded MP3: trimmed and normalised in the browser exactly like a recording, then saved as WAV.
@@ -595,8 +592,18 @@
   }
 
   // ---------- status ----------
+  function ago(t) {
+    if (!t) return '';
+    const s = Math.round((Date.now() - t) / 1000);
+    return s < 5 ? '' : ` (${s}s ago)`;
+  }
   function renderStatus(s) {
+    const tab = s.tablet || {};
     const vr = s.vr || {};
+    $('#tabDot').className = 'dot' + (tab.connected ? ' on' : '');
+    $('#tabConn').textContent = tab.connected ? `Yes (${tab.connected})` : 'No';
+    $('#tabScreen').textContent = (tab.screen || '–') + ago(tab.at);
+    $('#tabLang').textContent = LANG_NAMES[tab.lang] || '–';
     renderVrControl(s);
 
     $('#vrDot').className = 'dot' + (vr.connected ? (vr.ready ? ' on' : ' warn') : '');
@@ -618,15 +625,14 @@
   }
 
   // ---------- QR codes ----------
-  // linkText: shown instead of the address (e.g. when the address holds the PIN)
-  function qrBox(title, url, svg, size, linkText) {
+  function qrBox(title, url, svg, size) {
     const box = document.createElement('div');
     box.className = 'qr ' + size;
     box.innerHTML = `<b></b><div class="code">${svg}</div><a target="_blank"></a>`;
     box.querySelector('b').textContent = title;
     const a = box.querySelector('a');
     a.href = url;
-    a.textContent = linkText || url;
+    a.textContent = url;
     return box;
   }
   function renderLinks(data) {
@@ -637,8 +643,8 @@
       main.textContent = 'This laptop is not connected to a network. Connect it to the Wi-Fi, then restart the server.';
       return;
     }
-    $('#hfQr').replaceChildren(qrBox('Tablet: scan to download', best.urls.hearingFile, best.qr.hearingFile, 'big', 'hearing-test.html'));
     main.append(
+      qrBox('Hearing tablet', best.urls.tablet, best.qr.tablet, 'big'),
       qrBox('VR phone', best.urls.vr, best.qr.vr, 'big'),
       qrBox('Record digits', best.urls.record, best.qr.record, 'small'),
     );
@@ -651,35 +657,12 @@
       title.textContent = `${a.ip} – ${a.adapter}${a.likely ? '' : ' (probably a virtual adapter)'}`;
       const row = document.createElement('div');
       row.className = 'qr-row';
-      row.append(qrBox('VR phone', a.urls.vr, a.qr.vr, 'small'), qrBox('Tablet: hearing-test file', a.urls.hearingFile, a.qr.hearingFile, 'small', 'hearing-test.html'));
+      row.append(qrBox('Hearing tablet', a.urls.tablet, a.qr.tablet, 'small'), qrBox('VR phone', a.urls.vr, a.qr.vr, 'small'));
       other.append(title, row);
     }
   }
 
   // ---------- results ----------
-  // CSV from a tablet's staff panel: time,lang,srt_db,band,normal_listener,id
-  async function importCsv(e) {
-    const input = e.target;
-    const file = input.files[0];
-    input.value = '';
-    if (!file) return;
-    const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
-    const head = (lines.shift() || '').split(',').map((h) => h.trim());
-    const col = (name) => head.indexOf(name);
-    if (col('srt_db') < 0 || col('id') < 0) return alert('This is not a results file from the tablet (it needs the columns srt_db and id).');
-    const list = lines.map((line) => {
-      const c = line.split(',');
-      return { time: c[col('time')], lang: c[col('lang')], srt: Number(c[col('srt_db')]), band: c[col('band')], calib: c[col('normal_listener')] === 'yes', id: c[col('id')] };
-    });
-    try {
-      const r = await Staff.api('/api/host/results/import', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ results: list }) });
-      renderResults(r.summary);
-      alert(`Imported ${r.added} new result(s).` + (r.skipped ? ` ${r.skipped} skipped (already here or not readable).` : ''));
-    } catch (err) {
-      alert('Could not import: ' + err.message);
-    }
-  }
-
   function renderResults(r) {
     const c = r.counts;
     $('#cTotal').textContent = c.total;

@@ -232,9 +232,9 @@ test('host page gets the laptop addresses with QR codes (PIN only)', async () =>
   const { body } = await json('/api/host/links', { headers: PIN });
   assert.ok(Array.isArray(body.addresses));
   for (const a of body.addresses) {
-    assert.match(a.urls.hearingFile, /^https:\/\/[\d.]+:8443\/api\/host\/hearing-file\?pin=2468$/);
+    assert.match(a.urls.tablet, /^https:\/\/[\d.]+:8443\/ear\/hearing$/);
     assert.match(a.urls.vr, /\/vr$/);
-    assert.match(a.qr.hearingFile, /^<svg/);
+    assert.match(a.qr.tablet, /^<svg/);
   }
 });
 
@@ -415,42 +415,4 @@ test('hearing tablets and the VR monitor are separate: tablets never change the 
   } finally {
     for (const c of [tablet1, tablet2, monitor, host]) c.close();
   }
-});
-
-test('hearing-test file for a tablet on its own: PIN, everything inside, no server links', async () => {
-  const gdir = path.join(mediaDir, 'ear', 'digits-generated', 'si');
-  fs.mkdirSync(gdir, { recursive: true });
-  for (let d = 0; d <= 9; d++) fs.writeFileSync(path.join(gdir, `${d}.wav`), 'RIFFsi' + d);
-  assert.equal((await fetch(base + '/api/host/hearing-file')).status, 401);
-  const res = await fetch(base + '/api/host/hearing-file?pin=2468');
-  assert.equal(res.status, 200);
-  assert.match(res.headers.get('content-disposition'), /attachment; filename="?hearing-test\.html"?/);
-  const html = await res.text();
-  assert.doesNotMatch(html, /<(script|link)[^>]+(src|href)="\//); // nothing loaded from the laptop
-  assert.doesNotMatch(html, /socket\.io\.js/);
-  assert.match(html, /url\(data:font\/woff2;base64,/);
-  const standalone = JSON.parse(html.match(/window\.EAR_STANDALONE = (\{.*?\});<\/script>/s)[1]);
-  assert.equal(standalone.pin, '2468');
-  assert.equal(standalone.digitSource.si, 'generated');
-  assert.equal(Buffer.from(standalone.manifest.si['3'].split(',')[1], 'base64').toString(), 'RIFFsi3');
-  assert.ok(standalone.translations['home.title'].ta);
-  assert.equal(standalone.config.din.testTrials, 24);
-  assert.ok(html.includes('window.TabletStaff'));
-});
-
-test('results from a tablet CSV are imported once (PIN)', async () => {
-  const one = { id: 'tab-abc-123456', time: '2026-10-20T10:00:00.000Z', lang: 'si', srt: -9.4, band: 'good', calib: true };
-  const bad = { id: 'tab-bad-000001', time: 'x', lang: 'si', srt: 1, band: 'good' };
-  const post = (results, headers = PIN) =>
-    json('/api/host/results/import', { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ results }) });
-  assert.equal((await post([one], {})).status, 401);
-  const first = await post([one, bad]);
-  assert.deepEqual([first.body.added, first.body.skipped], [1, 1]);
-  const again = await post([one]);
-  assert.deepEqual([again.body.added, again.body.skipped], [0, 1]);
-  const saved = JSON.parse(fs.readFileSync(path.join(dataDir, 'ear_results.json'), 'utf8')).find((r) => r.id === one.id);
-  assert.deepEqual(saved, one);
-  const csv = await (await fetch(base + '/api/host/results.csv?pin=2468')).text();
-  assert.match(csv, /^time,lang,srt_db,band,normal_listener,id\n/);
-  assert.ok(csv.includes('2026-10-20T10:00:00.000Z,si,-9.4,good,yes,tab-abc-123456'));
 });

@@ -50,9 +50,9 @@
       </div>
 
       <div class="card connect">
-        <h2>Connect the VR phone</h2>
+        <h2>Connect the hearing tablet(s) and the VR phone</h2>
         <p class="small-note">
-          On the VR phone: open the <b>Camera</b> app (or Google Lens) and point it at the QR code, then tap the link.
+          On each hearing tablet / the VR phone: open the <b>Camera</b> app (or Google Lens) and point it at the QR code, then tap the link.
           If Chrome says <i>"Your connection is not private"</i>, tap <b>Advanced → Proceed</b> (it is your own laptop).
           The devices must be on the <b>same Wi-Fi</b> as this laptop.
         </p>
@@ -64,7 +64,7 @@
         <details>
           <summary>Still not connecting?</summary>
           <ul class="small-note">
-            <li>Check the phone is on the <b>same Wi-Fi</b> as the laptop (not a "guest" network – guest networks block devices from seeing each other).</li>
+            <li>Check the tablets and the phone are on the <b>same Wi-Fi</b> as the laptop (not a "guest" network – guest networks block devices from seeing each other).</li>
             <li><b>Windows Firewall (most common cause):</b> in the project folder, right-click <code>allow-firewall-windows.cmd</code> →
               <i>Run as administrator</i>. Or: Start → type <i>Allow an app through Windows Firewall</i> → <i>Change settings</i> → tick <b>Node.js</b> for <b>Private</b> (and Public) → OK.
               Also set the Wi-Fi to <i>Private network</i> (Settings → Network → Wi-Fi → your network → Private).</li>
@@ -74,33 +74,15 @@
         </details>
       </div>
 
-      <div class="card hearing-file">
-        <h2>Hearing test on the tablet (works alone – no laptop, no Wi-Fi)</h2>
-        <p class="small-note">
-          The whole hearing test – digits, texts, fonts, result bands – goes into <b>one file</b>, <code>hearing-test.html</code>.
-          Put it on the tablet once; after that the tablet needs nothing else. Results are kept <b>on the tablet</b>.
-        </p>
-        <p class="warning-box hidden" id="hfWarn"></p>
-        <div class="hf-row">
-          <div id="hfQr" class="qr-row"></div>
-          <ol class="small-note">
-            <li>Tablet on the same Wi-Fi as this laptop (only for this download). Scan the QR code with the tablet's camera, open the link in
-              <b>Chrome</b> (<i>Advanced → Proceed</i> if asked) – the file <code>hearing-test.html</code> downloads.</li>
-            <li>Open it: Chrome <b>⋮ → Downloads</b> → tap <code>hearing-test.html</code>. Bookmark it or add it to the home screen.</li>
-            <li>Put the headphones into the <b>tablet</b>. Test once yourself.</li>
-            <li><b>Staff panel on the tablet:</b> on the start screen hold the <b>top-right corner for 3 s</b>, enter the PIN – results,
-              <i>Download results (CSV)</i>, calibration mode.</li>
-            <li>Changed the digits, the bands or the settings here? Download the file again and open the new one.
-              Results already on the tablet stay.</li>
-          </ol>
-        </div>
-        <div class="btn-row">
-          <a class="btn small" id="hfDownload" href="#">⬇ Download hearing-test file</a>
-          <a class="btn ghost small" href="/ear/hearing" target="_blank">Try the hearing test on this laptop</a>
-        </div>
-      </div>
-
       <div class="grid">
+        <div class="card">
+          <h2><span class="dot" id="tabDot"></span>Hearing tablet(s) (/ear/hearing)</h2>
+          <dl class="kv">
+            <dt>Connected</dt><dd id="tabConn">–</dd>
+            <dt>Screen</dt><dd id="tabScreen">–</dd>
+            <dt>Language</dt><dd id="tabLang">–</dd>
+          </dl>
+        </div>
         <div class="card">
           <h2><span class="dot" id="vrDot"></span>VR phone (/vr)</h2>
           <dl class="kv">
@@ -166,7 +148,7 @@
         <h2>VR visitor screen on the monitor (/ear/vr)</h2>
         <p class="small-note">
           VR visitors use the monitor with the mouse: language → consent → condition → read → "Put on the VR headset". The
-          hearing test runs on the tablets on their own (see "Hearing test on the tablet").</p><p class="small-note"> VR earphones go into the <b>phone</b>.
+          hearing test runs on the tablets (/ear/hearing, headphones into each tablet). VR earphones go into the <b>phone</b>.
         </p>
         <ol class="small-note">
           <li>Connect the monitor to the laptop (HDMI). In Windows press <b>⊞ Win + P</b> → <b>Extend</b>.</li>
@@ -249,6 +231,7 @@
         <div class="btn-row">
           <button class="btn ghost small" id="regenDigits" type="button">Make generated digits again</button>
           <a class="btn ghost small" href="/ear/record">Open recording helper</a>
+          <a class="btn ghost small" href="/ear/hearing" target="_blank">Open hearing tablet page</a>
           <a class="btn ghost small" href="/vr" target="_blank">Open VR page</a>
         </div>
       </div>
@@ -260,12 +243,12 @@
           (e.g. classmates who score well on a proper hearing test) do the test <b>in each language</b>, with the same tablet and headphones.
           Their results are not counted as visitors. The suggestion is: <b>GOOD</b> up to their average + 2 × SD, <b>REFER</b> above that + 3 dB.
         </p>
-        <p class="small-note">
-          <b>On the tablet:</b> staff panel (hold the top-right corner of the start screen for 3 s) → tick <b>Calibration mode</b>, let the
-          normal listeners do the test, switch it off again. The tablet shows the suggested bands and can use them straight away
-          (<i>Use for …</i>). Or import the tablet's CSV below, choose the bands here, and download a new hearing-test file.
-          You can also tick <i>Normal listener</i> next to any result in the table below.
-        </p>
+        <label class="calib-toggle">
+          <input type="checkbox" id="calibMode" />
+          <span><b>Calibration mode</b> – every new hearing test is saved as a normal listener (the tablet also shows the dB value)</span>
+        </label>
+        <p class="warning-box hidden" id="calibModeWarn">⚠ Calibration mode is ON – remember to switch it OFF before visitors arrive.</p>
+        <p class="small-note">You can also tick <i>Normal listener</i> next to any result in the table below.</p>
         <div class="calib-grid" id="calibLangs"></div>
         <div class="btn-row">
           <button class="btn ghost small" id="calibClear" type="button">Unmark all normal listeners…</button>
@@ -273,9 +256,7 @@
       </div>
 
       <div class="card">
-        <h2>Hearing results (anonymous, imported from the tablets)</h2>
-        <p class="small-note">Tablet staff panel → <i>Download results (CSV)</i> → copy the file to this laptop (USB cable, e-mail, …) → import it here.
-          Importing the same file twice adds nothing.</p>
+        <h2>Hearing results (anonymous)</h2>
         <div class="counts">
           <div class="count"><b id="cTotal">0</b>Total</div>
           <div class="count"><b id="cToday">0</b>Today</div>
@@ -289,7 +270,6 @@
           <tbody id="recent"></tbody>
         </table>
         <div class="btn-row">
-          <label class="btn small file-btn">⬆ Import results from a tablet (CSV)<input type="file" id="importCsv" accept=".csv,text/csv" /></label>
           <a class="btn ghost small" id="csvLink" href="#">Download CSV</a>
           <button class="btn ghost small" id="resetResults" type="button">Reset results…</button>
         </div>
