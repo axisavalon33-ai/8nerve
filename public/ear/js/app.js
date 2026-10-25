@@ -17,10 +17,7 @@
   };
 
   const audio = new DinAudio();
-  // /ear/hearing = tablet with the hearing test only, /ear/vr = monitor with VR only, /ear = both.
-  const MODE = /\/ear\/hearing\/?$/.test(location.pathname) ? 'hearing' : /\/ear\/vr\/?$/.test(location.pathname) ? 'vr' : 'all';
-  // The hearing tablets must not disturb the VR control: they connect with their own role.
-  const socket = io({ auth: { role: MODE === 'hearing' ? 'tablet' : 'monitor' } });
+  const socket = io({ auth: { role: 'tablet' } });
 
   // Screens where the idle timer is longer (visitor is doing the test) or switched off (VR running).
   // vrIntro is included: the visitor may be putting on the headset, waiting for the helper to press START.
@@ -31,8 +28,6 @@
 
   // ---------------- screens ----------------
   function show(name) {
-    // Single-purpose screens have no menu: "back to menu" means back to the start.
-    if (name === 'menu' && MODE !== 'all') name = 'home';
     if (state.screen === name) return;
     if (state.screen === 'volume' && name !== 'volume') stopSample();
     if (state.screen === 'test' && name !== 'test') abortTest();
@@ -96,12 +91,7 @@
     b.addEventListener('click', () => {
       audio.unlock(); // first tap: allow sound
       setLang(b.dataset.langChoice);
-      if (MODE === 'hearing') {
-        $('#tickHearing').checked = false;
-        $('#contHearing').disabled = true;
-        show('ackHearing');
-      } else if (MODE === 'vr') show('ackVr');
-      else show('menu');
+      show('menu');
     }),
   );
   $$('[data-go]').forEach((b) => b.addEventListener('click', () => show(b.dataset.go)));

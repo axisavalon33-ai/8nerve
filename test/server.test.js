@@ -121,7 +121,7 @@ test('spoken instruction MP3: upload, used at START, back to the phone voice', a
   assert.equal(v.bppv.en, null);
 
   const phone = ioClient(base, { auth: { role: 'vr' }, transports: ['websocket'] });
-  const tablet = ioClient(base, { auth: { role: 'monitor' }, transports: ['websocket'] });
+  const tablet = ioClient(base, { auth: { role: 'tablet' }, transports: ['websocket'] });
   try {
     await Promise.all([phone, tablet].map((c) => new Promise((r) => c.on('connect', r))));
     const got = new Promise((r) => phone.once('vr:start', r));
@@ -158,7 +158,7 @@ test('STOP on the tablet reaches the VR phone; START carries the settings', asyn
       s.on('connect', () => resolve(s));
     });
   const phone = await connect({ role: 'vr' });
-  const tablet = await connect({ role: 'monitor' });
+  const tablet = await connect({ role: 'tablet' });
   const host = await connect({ role: 'host', pin: '2468' });
 
   const started = new Promise((r) => phone.once('vr:start', r));
@@ -194,7 +194,7 @@ test('headset calibration: live to the phone, clamped to the allowed ranges, sav
       s.on('connect', () => resolve(s));
     });
   const phone = await connect({ role: 'vr' });
-  const tablet = await connect({ role: 'monitor' });
+  const tablet = await connect({ role: 'tablet' });
 
   const got = new Promise((r) => phone.on('vr:cal', (m) => m.testPattern && r(m)));
   tablet.emit('vr:cal', { cal: { distortion: 5, ipd: 0.6, zoom: 0.1 }, testPattern: true });
@@ -232,7 +232,7 @@ test('host page gets the laptop addresses with QR codes (PIN only)', async () =>
   const { body } = await json('/api/host/links', { headers: PIN });
   assert.ok(Array.isArray(body.addresses));
   for (const a of body.addresses) {
-    assert.match(a.urls.tablet, /^https:\/\/[\d.]+:8443\/ear\/hearing$/);
+    assert.match(a.urls.tablet, /^https:\/\/[\d.]+:8443\/ear$/);
     assert.match(a.urls.vr, /\/vr$/);
     assert.match(a.qr.tablet, /^<svg/);
   }
@@ -304,7 +304,7 @@ test('calibrate with normal listeners: mode, marking, statistics, suggested and 
   assert.equal((await json('/api/host/results', { headers: PIN })).body.calibration.ta.n, 0);
 });
 
-test('VR on the monitor: host chooses the condition for the visitor screen, START uses the visitor language, pictures + picture time', async () => {
+test('no tablet: host chooses the condition for the visitor screen, START uses the visitor language, pictures + picture time', async () => {
   assert.equal((await fetch(base + '/ear/display')).status, 404, 'separate monitor page removed – the visitor app runs on the monitor');
   // picture time: 3–120 s, default 15
   assert.equal((await json('/api/config')).body.display.imageSeconds, 15);
@@ -328,7 +328,7 @@ test('VR on the monitor: host chooses the condition for the visitor screen, STAR
       const s = ioClient(base, { auth, transports: ['websocket'] });
       s.on('connect', () => resolve(s));
     });
-  const visitor = await connect({ role: 'monitor' }); // the VR visitor screen on the monitor (/ear/vr)
+  const visitor = await connect({ role: 'tablet' }); // the visitor app on the monitor
   const phone = await connect({ role: 'vr' });
   const host = await connect({ role: 'host', pin: '2468' });
   try {
@@ -338,11 +338,11 @@ test('VR on the monitor: host chooses the condition for the visitor screen, STAR
     assert.deepEqual(await sel, { condition: 'oscillopsia' });
 
     // visitor screen reports consent + stage -> host sees it
-    const seen = new Promise((r) => host.on('status', (st) => st.monitor.stage === 'wear' && r(st)));
+    const seen = new Promise((r) => host.on('status', (st) => st.tablet.stage === 'wear' && r(st)));
     visitor.emit('tablet:status', { screen: 'vrIntro', lang: 'si', condition: 'oscillopsia', consent: true, stage: 'wear' });
     const st = await seen;
-    assert.equal(st.monitor.consent, true);
-    assert.equal(st.monitor.condition, 'oscillopsia');
+    assert.equal(st.tablet.consent, true);
+    assert.equal(st.tablet.condition, 'oscillopsia');
 
     // host presses START without a language -> the visitor's language is used; visitor screen is told
     const started = new Promise((r) => phone.once('vr:start', r));
@@ -382,37 +382,5 @@ test('home screen video: upload (PIN), shown to the visitor screen, remove', asy
     assert.deepEqual((await json('/api/ear/video', { method: 'DELETE', headers: PIN })).body, { url: null });
   } finally {
     visitor.close();
-  }
-});
-
-test('hearing tablets and the VR monitor are separate: tablets never change the VR control', async () => {
-  for (const p of ['/ear/hearing', '/ear/vr', '/ear']) assert.equal((await fetch(base + p)).status, 200, p);
-  const connect = (auth) =>
-    new Promise((resolve) => {
-      const s = ioClient(base, { auth, transports: ['websocket'] });
-      s.on('connect', () => resolve(s));
-    });
-  const tablet1 = await connect({ role: 'tablet' });
-  const tablet2 = await connect({ role: 'tablet' });
-  const monitor = await connect({ role: 'monitor' });
-  const host = await connect({ role: 'host', pin: '2468' });
-  try {
-    let tabletGotSelect = false;
-    tablet1.on('visitor:select', () => (tabletGotSelect = true));
-    monitor.emit('tablet:status', { screen: 'vrIntro', lang: 'ta', condition: 'bppv', consent: true, stage: 'wear' });
-    const seen = new Promise((r) => host.on('status', (st) => st.tablet.screen === 'test' && st.monitor.condition === 'bppv' && r(st)));
-    tablet1.emit('tablet:status', { screen: 'test', lang: 'si', condition: 'menieres' });
-    const st = await seen;
-    assert.equal(st.tablet.connected, 2);
-    assert.equal(st.monitor.connected, 1);
-    assert.equal(st.monitor.lang, 'ta', 'the VR control still follows the monitor');
-    assert.equal(st.tablet.condition, undefined, 'tablets do not report VR conditions');
-    const sel = new Promise((r) => monitor.once('visitor:select', r));
-    host.emit('visitor:select', { condition: 'menieres' });
-    await sel;
-    await new Promise((r) => setTimeout(r, 100));
-    assert.equal(tabletGotSelect, false, 'hearing tablets do not receive VR commands');
-  } finally {
-    for (const c of [tablet1, tablet2, monitor, host]) c.close();
   }
 });

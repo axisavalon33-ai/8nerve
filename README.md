@@ -1,18 +1,17 @@
 # 8nerve – "Ear & Balance" station (8th cranial nerve)
 
-An offline exhibition station about hearing and balance.
+An offline exhibition station about hearing and balance. **No tablet is needed**:
 
 | Device | Page | Who uses it |
 |---|---|---|
-| **Tablet(s)** + headphones (one or more) | `/ear/hearing` | **Hearing test** visitors: language → consent → hearing-in-noise test (no VR here) |
-| **Monitor** connected to the laptop, with a **mouse** | `/ear/vr` – the *VR visitor screen* | **VR** visitors: language → consent → choose a condition → read about it → "Put on the VR headset" (no hearing test here) |
+| **Monitor** connected to the laptop, with a **mouse** (and keyboard) | `/ear` – the *visitor screen* | The **visitor**: language → menu → hearing-in-noise test, or VR: consent → choose a condition → read about it → "Put on the VR headset" |
 | **Laptop screen** | `/ear/host` (PIN) – the *host page* | **You**: **START / STOP** the VR, choose a condition for the visitor, settings, results, uploads, calibration |
 | **Android phone in a VR box** + earphones | `/vr` | Shows the camera picture with the balance-disorder effects |
 | (optional) | `/ear/record` (PIN) | Record the digits 0–9 for each language |
 
 Everything runs from **one laptop** with Node.js. No internet is needed once it is installed. The phone must be on the same
-Wi-Fi as the laptop (a pocket router or a hotspot is fine). Headphones for the **hearing test** go into each **tablet**;
-earphones for **VR** go into the **phone**. (`/ear` shows both parts on one screen, if you ever need that.)
+Wi-Fi as the laptop (a pocket router or a hotspot is fine). Headphones for the **hearing test** go into the **laptop**;
+earphones for **VR** go into the **phone**.
 
 > ⚠️ Screening **simulation** for awareness only – not a medical test. Result bands and texts marked `needsReview` must be
 > checked before the exhibition (see "Before the exhibition").
@@ -46,18 +45,14 @@ npm start
 - The black window must stay open. **Ctrl + C** stops the station.
 - If espeak-ng is installed, the first start says *"Made 30 placeholder digit recordings"*.
 
-## 3. Hearing tablet(s)
-
-On each tablet: host page → *Connect …* → scan the **Hearing tablet** QR code → *Advanced → Proceed*. The page goes full screen
-on the first tap. Plug headphones into the tablet and set its volume to a fixed comfortable level.
-
-## 3b. VR visitor screen on the monitor
+## 3. Visitor screen on the monitor
 
 1. Connect the monitor (HDMI) and press **⊞ Win + P → Extend**.
-2. Host page → *VR visitor screen on the monitor* → **🖥 Open VR visitor screen**.
+2. Host page → *Visitor screen on the monitor* → **🖥 Open visitor screen**.
 3. In that window click **⛶ Full screen on the monitor** (bottom left). Allow "window management" if Chrome asks. Or drag the
    window onto the monitor and press **F11**.
-4. Put the **mouse** in front of the VR visitor's chair.
+4. Put the **mouse** (and keyboard) in front of the visitor's chair. Plug the **hearing-test headphones** into the laptop and set the
+   laptop volume to a fixed comfortable level.
 
 ## 4. VR phone
 
@@ -76,12 +71,13 @@ crosses join into **one** cross (*Distance between eye centres*, *Vertical posit
 
 ## 5. Running a visitor
 
-### Hearing test (on a tablet)
-Visitor: language → tick the box → **Continue** → set a comfortable volume → **Continue** → 2 practice + 24 test rounds: hear
-3 numbers in noise, tap them on the big keypad (a keyboard also works) → coloured result. You see the dB value on the host page.
+### Hearing test (on the monitor)
+Visitor: language → **Test your hearing** → tick the box → **Continue** → set a comfortable volume → **Continue** →
+2 practice + 24 test rounds: hear 3 numbers in noise, type them with the **mouse** (big keypad) or the **keyboard** (digits,
+Backspace, Enter) → coloured result. You see the dB value on the host page.
 
 ### VR (visitor on the monitor, you on the host page)
-1. Visitor sits on the chair. On the monitor: language → reads the warning list, **ticks consent**
+1. Visitor sits on the chair. Visitor: language → **Experience balance disorders in VR** → reads the warning list, **ticks consent**
    → **Continue**. (Host page shows *Consent: Given ✓*.)
 2. The visitor **chooses a condition** on the monitor – or ask them and click it in **VR control** on the host page.
 3. The monitor shows the condition's **picture and text** for the *picture time* (host page, − / +), then
@@ -94,15 +90,15 @@ Visitor: language → tick the box → **Continue** → set a comfortable volume
 6. When it ends (or after STOP) the phone shows **"Take the headset off slowly"** and the monitor goes **back to the condition
    menu** with "Take the headset off slowly – Sit for a moment" and when to see a doctor.
 
-After 60 s without being used the tablet / visitor screen goes back to the language choice (3 min while reading or waiting
+After 60 s without the mouse being used the visitor screen goes back to the language choice (3 min while reading or waiting
 for START; never while VR is running).
 
 ---
 
 ## 6. Host page – overview
 - **VR control:** visitor screen / language / consent / condition / phone state, condition buttons, **START**, **STOP** (Esc), progress.
-- **Connect:** QR codes for the hearing tablet(s) and the VR phone (+ other laptop addresses and connection tips).
-- **Status:** hearing tablet(s) and VR phone (camera, sensors, fullscreen, effect strength, frames per second).
+- **Connect the VR phone:** QR code (+ other laptop addresses and connection tips).
+- **Status:** visitor screen and VR phone (camera, sensors, fullscreen, effect strength, frames per second).
 - **VR experience – live controls:** effect strength (Low / Medium / High, 10–100 %), length of each condition (10–60 s,
   default 30 s), Ménière's ringing and muffled-sound volumes with **Test sound**, oscillopsia sensitivity.
 - **Visitor screen on the monitor:** open it, **looping home video** (upload MP4/WEBM – plays muted behind the language
@@ -150,12 +146,12 @@ before the end. Default strength **Low**. Hard limits: spin ≤ 90°/s, rotation
 ```
 npm test
 ```
-41 automatic tests: hearing-test rules, staircase, SRT, bands, loudness, noise, trimming/normalising, WAV, espeak-ng digits,
+40 automatic tests: hearing-test rules, staircase, SRT, bands, loudness, noise, trimming/normalising, WAV, espeak-ng digits,
 digit sets never mixed, nystagmus, BPPV, spinning (speed limit, ends upright), 10–60 s lengths, oscillopsia bounce, head-tilt
 maths, server API and PIN, results, normal-listener calibration and per-language bands, settings limits, uploads, headset
 calibration, QR addresses, host START/STOP and condition choice reaching the phone and the visitor screen, translations.
 
-Quick laptop-only test: `npm run dev`, then <http://localhost:8080/ear/hearing>, <http://localhost:8080/ear/vr> and <http://localhost:8080/ear/host>.
+Quick laptop-only test: `npm run dev`, then <http://localhost:8080/ear> and <http://localhost:8080/ear/host>.
 
 ## Before the exhibition – please check
 - [ ] **Record the digits** for every language you will use (host page → *Digit audio*).
@@ -178,10 +174,10 @@ test/              automatic tests (npm test)
 ## Troubleshooting
 | Problem | Fix |
 |---|---|
-| Tablet / phone cannot open the page | Same Wi-Fi (not a guest network)? Run `allow-firewall-windows.cmd` as administrator. Try the other addresses on the host page. |
+| Phone cannot open the page | Same Wi-Fi (not a guest network)? Run `allow-firewall-windows.cmd` as administrator. Try the other addresses on the host page. |
 | "Not private" warning | Normal: *Advanced → Proceed*. It returns if the laptop's IP address changed. |
 | START is greyed out | Host page hint says why: no condition chosen yet, or the VR phone is not ready (tap *Tap to start VR*). |
-| VR visitor screen is on the laptop, not the monitor | Win + P → Extend; then *⛶ Full screen on the monitor*, or drag the window and press F11. |
+| Visitor screen is on the laptop, not the monitor | Win + P → Extend; then *⛶ Full screen on the monitor*, or drag the window and press F11. |
 | "The number recordings are missing" | Install espeak-ng and restart, or record the digits (host page → *Digit audio*). |
 | BPPV never starts | *Head tilt* must go above +30 when tilting right; otherwise tick *Invert head tilt*. |
 | Two pictures don't join / lines bent in the headset | Host page → *Headset calibration* with the test pattern. |

@@ -59,7 +59,7 @@
       imageFiles = m;
       renderImages();
     });
-    $('#openVisitor').addEventListener('click', () => window.open('/ear/vr', 'earVisitor', 'popup,width=1280,height=800'));
+    $('#openVisitor').addEventListener('click', () => window.open('/ear', 'earVisitor', 'popup,width=1280,height=800'));
     setupVrControl();
     setupCalibration();
     $('#picMinus').addEventListener('click', () => changePicTime(-5));
@@ -286,7 +286,7 @@
       wrap.append(b);
     }
     $('#vcStart').addEventListener('click', () => {
-      const tab = (lastStatus && lastStatus.monitor) || {};
+      const tab = (lastStatus && lastStatus.tablet) || {};
       if (!tab.condition || !hostSocket) return;
       hostSocket.emit('vr:start', { condition: tab.condition, lang: tab.lang });
     });
@@ -298,12 +298,12 @@
   }
   function renderVrControl(s) {
     lastStatus = s;
-    const tab = s.monitor || {};
+    const tab = s.tablet || {};
     const vr = s.vr || {};
     const running = vr.state === 'running' || vr.state === 'waiting';
     let screen = SCREEN_NAMES[tab.screen] || tab.screen || '–';
     if (tab.screen === 'vrIntro') screen = tab.stage === 'wear' ? 'VR – "Put on the VR headset" ✓ ready to start' : 'VR – reading about the condition (picture time)';
-    $('#vcScreen').textContent = tab.connected ? screen : 'Not open – click "Open VR visitor screen" below';
+    $('#vcScreen').textContent = tab.connected ? screen : 'Not open – click "Open visitor screen" below';
     $('#vcLang').textContent = LANG_NAMES[tab.lang] || '–';
     $('#vcConsent').textContent = tab.consent ? 'Given ✓' : 'Not yet';
     $('#vcCond').textContent = COND_NAMES[tab.condition] || (running ? COND_NAMES[vr.condition] : '–') || '–';
@@ -644,7 +644,6 @@
       return;
     }
     main.append(
-      qrBox('Hearing tablet', best.urls.tablet, best.qr.tablet, 'big'),
       qrBox('VR phone', best.urls.vr, best.qr.vr, 'big'),
       qrBox('Record digits', best.urls.record, best.qr.record, 'small'),
     );
@@ -657,7 +656,7 @@
       title.textContent = `${a.ip} – ${a.adapter}${a.likely ? '' : ' (probably a virtual adapter)'}`;
       const row = document.createElement('div');
       row.className = 'qr-row';
-      row.append(qrBox('Hearing tablet', a.urls.tablet, a.qr.tablet, 'small'), qrBox('VR phone', a.urls.vr, a.qr.vr, 'small'));
+      row.append(qrBox('VR phone', a.urls.vr, a.qr.vr, 'small'));
       other.append(title, row);
     }
   }
